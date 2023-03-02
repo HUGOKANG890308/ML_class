@@ -1,4 +1,3 @@
-# .gitignore_global
 # Numerous always-ignore extensions
 *.diff
 *.err
@@ -42,6 +41,7 @@ ehthumbs.db
 .Trashes
 *.swp
 ._*
+.gitignore
  
 # Folders to ignore
 bower_components
