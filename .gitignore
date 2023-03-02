@@ -1,5 +1,4 @@
 # .gitignore_global
- 
 # Numerous always-ignore extensions
 *.diff
 *.err
@@ -20,6 +19,9 @@
 *.rar
 *.tar
 *.zip
+*.html
+*.csv
+*.jpg
  
 # OS or Editor folders
 ._*
