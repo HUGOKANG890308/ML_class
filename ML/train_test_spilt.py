@@ -1,6 +1,6 @@
 import pandas 
 import numpy as np
-from sklearn import train_test_split
+from sklearn.model_selection import train_test_split
 class train_test_selection():
     def __init__(self,dataset,seed,train_size=0.8):
         '''        
@@ -13,7 +13,7 @@ class train_test_selection():
         self.dataset=dataset
         self.seed=seed
         self.train_size=train_size
-        self.trainingdata,self.testingdata=train_test_split(self.dataset,test_size=1-self.train_size,random_state=self.seed)
+        self.x_train,self.x_test,self.y_train,self.y_test=train_test_split(self.dataset,test_size=1-self.train_size,random_state=self.seed)
     
 '''
 def __getitem__(self):
