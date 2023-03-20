@@ -15,7 +15,11 @@ class train_test_selection():
         self.target=target
         self.seed=seed
         self.train_size=train_size
-        self.x_train,self.x_test,self.y_train,self.y_test=train_test_split(self.dataset.drop([self.dataset[self.target]],axis=1),test_size=1-self.train_size,random_state=self.seed)
+        self.X=self.dataset.drop([self.target],axis=1)
+        self.y=self.dataset[self.target]
+    def get_data(self):
+        self.x_train,self.x_test,self.y_train,self.y_test=train_test_split(self.X,self.y,test_size=1-self.train_size,random_state=self.seed)
+        return self.x_train,self.x_test,self.y_train,self.y_test
     
 '''
 def __getitem__(self):
@@ -31,3 +35,4 @@ def __getitem__(self):
         if self.train==False:
             return self.testingdata
 '''
+
