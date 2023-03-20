@@ -8,7 +8,7 @@ class load_data():
         '''
         path: the path of the data
         input_type:DataFrame
-        output_type:DataFrame
+        output_type:object
         '''
         self.path = path
         self.data = pd.read_csv(self.path)
@@ -34,4 +34,12 @@ class load_data():
         return self.data_scaler
     def get_data(self):
         return self.data
-    
+path='weatherAUS.csv'
+data=load_data(path)
+data=data.get_data()
+for i in(data.columns[:-1]):
+    if data[i].dtype=="object":
+        data=data.drop(i,axis=1)
+data.info()
+data_scaler=data.scaler("standardscaler")
+data_scaler.head()
