@@ -21,7 +21,9 @@ data['RainTomorrow'] = data['RainTomorrow'].map({'Yes': 1, 'No': 0})
 for i in(data.columns):
     if data[i].dtype=="object":
         data=data.drop(i,axis=1)
-traingdata,testdata=train_test_selection(data,seed=0)
+train_test_selection(dataset=data,target='RainTomorrow',seed=0)
+x_train, x_test, y_train, y_test=train_test_selection(dataset=data,target='RainTomorrow',seed=0)
+
 traingdata,testdata=train_test_selection(data,seed=1,train_size=0.8)
 x_train=traingdata.iloc[:,3:]
 y_train=traingdata.iloc[:,2]
