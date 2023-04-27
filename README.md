@@ -1,12 +1,12 @@
 # 程式架構
-記得每個方法不要寫死!!!
-要可以透過function變動,也不要一個function 只有一個功能把自己搞死
+    記得每個方法不要寫死!!! 
+    要可以透過function變動,也不要一個function 只有一個功能把自己搞死
 ## 禁止事項
-1.亂取變數名稱
-2.亂取function名稱
-3.一直覆蓋類似東西,ex:x_train=x_train1
-4 function 要有註解,解釋input/output內容與格式
-5.print 要有意義,不要寫死 善正print(f'')
+    1.亂取變數名稱 
+    2.亂取function名稱 
+    3.一直覆蓋類似東西,ex:x_train=x_train1 
+    4 function 要有註解,解釋input/output內容與格式 
+    5.print 要有意義,不要寫死 善正print(f'') 
 ## 資料處理
 ### 切分資料
     1.切成train test vaild
