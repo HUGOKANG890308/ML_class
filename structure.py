@@ -1,10 +1,3 @@
-import pandas as pd
-import numpy as np
-import os
-from sklearn.tree import DecisionTreeClassifier
-from sklearn import metrics
-import optuna
-
 def train_test_spiltting(data,test_size=0.2,random_state=0):
     '''
     data: input raw data ; type: pandas dataframe
@@ -189,4 +182,9 @@ if __name__ == '__main__':
         evaluate_classifier(using_model[i],X_train, y_train, X_test, y_test)
         print('------------------')
     '''
-       
+    import pandas as pd
+    import numpy as np
+    import os
+    from sklearn.tree import DecisionTreeClassifier
+    from sklearn import metrics
+    import optuna
