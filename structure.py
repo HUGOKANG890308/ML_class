@@ -100,6 +100,18 @@ def default_classifier(clf, X_train, y_train,X_vaild,y_vaild, X_test, y_test):
     y_test: input testing label ; type: pandas dataframe
     '''
     evaluation(y_pred,y_true)
+def basic_ml(using_model={}):
+    '''
+    using_model: input using model ; type: dictionary
+    '''
+    for i in using_model:
+        i.train(x_train,y_train)
+        y_pred=i.predict(x_test)
+        
+
+
+    
+  
 
 class Classifier(object):
     def __init__(self,clf, X_train, y_train,X_vaild,y_vaild, X_test, y_test):
