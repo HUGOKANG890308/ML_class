@@ -16,6 +16,7 @@
 ## 3.3 feature selection
     1.domian 先刪除重複資料
     2.wrapper method or filter method or embedded method
+    3.raw data
 ## 3.4 不平衡資料處理
     1. oversampling
     2. udersampling 
