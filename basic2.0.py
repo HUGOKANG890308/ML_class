@@ -3,6 +3,10 @@ from xgboost import XGBClassifier
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, fbeta_score
 import pandas as pd
 import numpy as np
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split
+X,y=make_classification(n_samples=1000,n_classes=2,weights=[0.9,0.1],random_state=1)
+X_train,X_test,y_train,y_test=train_test_split(X,y,test_size=0.2,random_state=1)
 def evaluation(y_test, y_pred):
     '''
     to return metrics score
@@ -40,10 +44,10 @@ def basic_ml(using_model = {'xgb': XGBClassifier(),'rf': RandomForestClassifier(
     '''
     score = []
     for i in using_model:
-        
         model = using_model[i]
-        model.fit(x_train, y_train)
-        y_pred = model.predict(x_test)
+        model.fit(X_train, y_train)
+        y_pred = model.predict(X_test)
         score.append([i]+list(evaluation(y_test, y_pred)))
-        
     return pd.DataFrame(data = score, columns = ['model', 'accuracy', 'f1_score', 'precision', 'recall', 'auc', 'f_beta'])
+df=basic_ml(using_model={'xgb':XGBClassifier(),'rf':RandomForestClassifier()},X_train=X_train,y_train=y_train,X_test=X_test,y_test=y_test)
+print(df)
