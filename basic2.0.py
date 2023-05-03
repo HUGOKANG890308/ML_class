@@ -18,12 +18,12 @@ def evaluation(y_test, y_pred):
     output:
         evaluation result; type: tuple
     '''
-    ac = accuracy_score(y_test, y_pred)
-    f1 = f1_score(y_test, y_pred)
-    pre = precision_score(y_test, y_pred)
-    rec = recall_score(y_test, y_pred)
-    auc = roc_auc_score(y_test, y_pred)
-    f_beta = fbeta_score(y_test, y_pred, beta=3)
+    ac = round(accuracy_score(y_test, y_pred),4)
+    f1 = round(f1_score(y_test, y_pred),4)
+    pre = round(precision_score(y_test, y_pred),4)
+    rec = round(recall_score(y_test, y_pred),4)
+    auc =round(roc_auc_score(y_test, y_pred),4)
+    f_beta = round(fbeta_score(y_test, y_pred, beta=3),4)
     
     return ac, f1, pre, rec, auc, f_beta
 
