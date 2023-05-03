@@ -1,7 +1,8 @@
 from sklearn.ensemble import RandomForestClassifier
 from xgboost import XGBClassifier
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, fbeta_score
-
+import pandas as pd
+import numpy as np
 def evaluation(y_test, y_pred):
     '''
     to return metrics score
