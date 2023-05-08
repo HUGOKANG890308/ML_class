@@ -18,8 +18,9 @@ from sklearn.svm import SVR
 from mlxtend.feature_selection import SequentialFeatureSelector as SFS
 from mlxtend.feature_selection import ExhaustiveFeatureSelector as EFS
 
-def feature_selection(X, y, method, random_state=0):
+def feature_selection(X, y, method='raw', model=SVC(kernel='rbf', C=10 ),  n_feature=30 , threshold=10, random_state=0):
     '''
+    Input:
     X: input raw data include all feature; type: pandas dataframe
     y: input target: type: pandas dataframe
     method: Method of feature selection, can be one of the following:
@@ -30,16 +31,18 @@ def feature_selection(X, y, method, random_state=0):
             - 'Sequential Feature Selection': selects features using SFS algorithm
             - 'Exhaustive Feature Selection': selects features using EFS algorithm
             - 'Treebased_embedded_approach': select feature using Tree base algorithm
+            - 'raw' : select all feature
+    n_feature: number of features ; default: 40
     random_state: random state ; type: int; default: 0
+
     
     Returns:
-    pandas dataframe with selected features, X_new
-    """
-    
+    pandas dataframe with selected features, X_new & y
+
     '''
     
     npX = np.array(X)
-    
+
     if method == 'basic_filter_approach':
         
         threshold = 0 # threshold: float, threshold value for obtain constant feature
@@ -70,7 +73,7 @@ def feature_selection(X, y, method, random_state=0):
         
     elif method == 'mutual_information_approach':
         
-        threshold = 0.01 # threshold: float, threshold value for mutual information score
+        threshold = 0.001 # threshold: float, threshold value for mutual information score
         drop_feature = []
         
         #obtain feature score
@@ -121,6 +124,7 @@ def feature_selection(X, y, method, random_state=0):
         
     elif method == 'variance_inflation_factor':
         
+        threshold = 10
         f_size = len(X.columns)
         X = X.assign(const=1)
         record = 0
@@ -130,21 +134,20 @@ def feature_selection(X, y, method, random_state=0):
                 r_str = r_str + X.columns[i1] \
                         + '\t{:.4f}\t'.format(variance_inflation_factor(X.values,i1)) + '\n'
             print(r_str)
-            if variance_inflation_factor(X.values,record) > 10:
+            if variance_inflation_factor(X.values,record) > threshold:
                 X.drop([X.columns[record]], axis=1, inplace=True)
                 f_size -= 1
             else:
                 record += 1
         X_new = X.drop(['const'], axis=1)
         return X_new, y
-          
+        
         
     elif method == 'Sequential Feature Selection':
         
-        num_feature = 60 #num_feature: the number of features keep in dataframe
-        
-        sfs = SFS(model, forward=True, cv=5, floating=False, k_features = num_feature,
-                  scoring='recall_weighted', verbose=0, n_jobs=-1)
+        model = model
+        sfs = SFS(model, forward=True, cv=5, floating=False, k_features = n_feature,
+                scoring='recall_weighted', verbose=0, n_jobs=-1)
         sfs.fit(X, y, custom_feature_names=X.columns.values)
         print('Best score achieved:{}, Feature\'s names: {}\n'.format(sfs.k_score_, sfs.k_feature_names_))
         for i1 in sfs.subsets_:
@@ -157,8 +160,8 @@ def feature_selection(X, y, method, random_state=0):
             
     elif method == 'Exhaustive Feature Selection':
         '''跑很久'''
-        num_feature = 60 #num_feature: the number of features keep in dataframe
         
+        model = model
         efs = EFS(model, cv=5, min_features=50, max_features=60, scoring='recall_weighted', n_jobs=-1)
         efs.fit(X, y, custom_feature_names=X.columns.values)
         print('Best score achieved:{}, Feature\'s names: {}\n'.format(efs.best_score_, efs.best_feature_names_))
@@ -179,15 +182,20 @@ def feature_selection(X, y, method, random_state=0):
         drop_columns = X.columns[feature_importances < threshold]
         X_new = X.drop(drop_columns, axis=1)
         return X_new, y
+    
+    elif method == 'raw':
+        X_new = X
+        return X_new, y
+
             
             
 df = pd.read_csv('data.csv (1).zip')
 df.head()
 X = df.drop(['Bankrupt?'], axis=1)
 y = df['Bankrupt?']
-X, y = feature_selection(X, y, method='basic_filter_approach')
+#X, y = feature_selection(X, y, method='basic_filter_approach')
 X, y = feature_selection(X, y, method='mutual_information_approach' )
 X, y = feature_selection(X, y, method='variance_inflation_factor')
-X, y = feature_selection(X, y, 'Sequential Feature Selection')
-X, y = feature_selection(X, y, 'Treebased_embedded_approach')
+#X, y = feature_selection(X, y, 'Sequential Feature Selection')
+#X, y = feature_selection(X, y, 'Treebased_embedded_approach')
 X.head()
