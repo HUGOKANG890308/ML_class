@@ -18,7 +18,7 @@ from sklearn.svm import SVR
 from mlxtend.feature_selection import SequentialFeatureSelector as SFS
 from mlxtend.feature_selection import ExhaustiveFeatureSelector as EFS
 
-def feature_selection(X, y, method='raw', model=SVC(kernel='rbf', C=10 ),  n_feature=30 , threshold=10, random_state=0):
+def feature_selection(X, y, method='raw', model=SVC(kernel='rbf', C=10 ),  n_feature=30 , random_state=0):
     '''
     Input:
     X: input raw data include all feature; type: pandas dataframe
@@ -32,7 +32,8 @@ def feature_selection(X, y, method='raw', model=SVC(kernel='rbf', C=10 ),  n_fea
             - 'Exhaustive Feature Selection': selects features using EFS algorithm
             - 'Treebased_embedded_approach': select feature using Tree base algorithm
             - 'raw' : select all feature
-    n_feature: number of features ; default: 40
+    model: Model use in 'Sequential Feature Selection' and 'Exhaustive Feature Selection'; default:SVC(kernel='rbf', C=10)
+    n_feature: number of features ; default: 30
     random_state: random state ; type: int; default: 0
 
     
