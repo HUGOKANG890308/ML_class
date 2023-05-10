@@ -1,3 +1,9 @@
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, fbeta_score
+import pandas as pd
+import numpy as np
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split
+
 def train_test_spiltting(data,test_size=0.2,random_state=0):
     '''
     data: input raw data ; type: pandas dataframe
@@ -77,29 +83,48 @@ def imblance_data(training_data,validation_data,testing_data,method='what method
 
 
 
-def evaluation(y_pred,y_true):
+def evaluation(y_test, y_pred):
     '''
-    input prediction and true label
-    y_pred: input prediction ; type: pandas dataframe
-    y_true: input true label ; type: pandas dataframe
+    to return metrics score
+    
+    input:
+        y_test: input true label; type: pandas dataframe
+        y_pred: input prediction; type: pandas dataframe
+        
+    output:
+        evaluation result; type: tuple
     '''
-    return evaluation_result
-    '''
-    output evaluation result;type:dataframe
-    '''
+    ac = round(accuracy_score(y_test, y_pred),4)
+    f1 = round(f1_score(y_test, y_pred),4)
+    pre = round(precision_score(y_test, y_pred),4)
+    rec = round(recall_score(y_test, y_pred),4)
+    auc =round(roc_auc_score(y_test, y_pred),4)
+    f_beta = round(fbeta_score(y_test, y_pred, beta=3),4)
+    
+    return ac, f1, pre, rec, auc, f_beta
 
-def default_classifier(clf, X_train, y_train,X_vaild,y_vaild, X_test, y_test):
+def basic_ml(using_model = dict, X_train, y_train, X_test, y_test ):
     '''
-    clf: input classifier ; type: sklearn classifier
-        XGBoost, LightGBM, CatBoost, RandomForest,SVM, KNN
-    X_train: input training data ; type: pandas dataframe
-    y_train: input training label ; type: pandas dataframe
-    X_vaild: input validation data ; type: pandas dataframe
-    y_vaild: input validation label ; type: pandas dataframe
-    X_test: input testing data ; type: pandas dataframe
-    y_test: input testing label ; type: pandas dataframe
+    to return evaluate dataframe
+    
+    input:
+        using_model: input using model; type: dictionary
+        x_train: input x_train; type: numpy.ndarray or dataframe
+        y_train: input y_train; type: numpy.ndarray or dataframe
+        x_test: input x_test; type: numpy.ndarray  or dataframe
+        y_test: input y_test; type: numpy.ndarray  or dataframe
+    
+    output:
+        evaluate dataframe
     '''
-    evaluation(y_pred,y_true)
+    score = []
+    for i in using_model:
+        model = using_model[i]
+        model.fit(X_train, y_train)
+        y_pred = model.predict(X_test)
+        score.append([i]+list(evaluation(y_test, y_pred)))
+    return pd.DataFrame(data = score, columns = ['model', 'accuracy', 'f1_score', 'precision', 'recall', 'auc', 'f_beta'])
+
 
 class Classifier(object):
     def __init__(self,clf, X_train, y_train,X_vaild,y_vaild, X_test, y_test):
@@ -182,9 +207,4 @@ if __name__ == '__main__':
         evaluate_classifier(using_model[i],X_train, y_train, X_test, y_test)
         print('------------------')
     '''
-    import pandas as pd
-    import numpy as np
-    import os
-    from sklearn.tree import DecisionTreeClassifier
-    from sklearn import metrics
-    import optuna
+   
