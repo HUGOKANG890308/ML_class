@@ -18,7 +18,8 @@ from sklearn.svm import SVR
 from mlxtend.feature_selection import SequentialFeatureSelector as SFS
 from mlxtend.feature_selection import ExhaustiveFeatureSelector as EFS
 
-def feature_selection(X, y, method='raw', model=SVC(kernel='rbf', C=10 ),  n_feature=30 , random_state=0):
+def feature_selection(X, y, method = 'raw', model = SVC(kernel = 'rbf', C = 10), n_feature = 30, random_state = 0):
+    
     '''
     Input:
     X: input raw data include all feature; type: pandas dataframe
@@ -46,7 +47,8 @@ def feature_selection(X, y, method='raw', model=SVC(kernel='rbf', C=10 ),  n_fea
 
     if method == 'basic_filter_approach':
         
-        threshold = 0 # threshold: float, threshold value for obtain constant feature
+       
+        threshold = 0  # threshold: float, threshold value for obtain constant feature
         drop_feature = []
         
         vt = VarianceThreshold(threshold=threshold)
@@ -68,9 +70,7 @@ def feature_selection(X, y, method='raw', model=SVC(kernel='rbf', C=10 ),  n_fea
             drop_feature.append(feature)
             
         # drop feature
-        X_new = X.drop(drop_feature, axis=1)
-        
-        return X_new, y
+        X_new = X.drop(drop_feature, axis=1 )
         
     elif method == 'mutual_information_approach':
         
@@ -79,6 +79,7 @@ def feature_selection(X, y, method='raw', model=SVC(kernel='rbf', C=10 ),  n_fea
         
         #obtain feature score
         score = mutual_info_classif(X, y, random_state=random_state)
+        
         for i, feature in enumerate(X.columns):
             print('{}={}'.format(feature, score[i]))
             
@@ -93,6 +94,7 @@ def feature_selection(X, y, method='raw', model=SVC(kernel='rbf', C=10 ),  n_fea
         ''''
         無法列印多feature的correlation matrix 建議不要用，
         用variance_inflation_factor可以得到類似效果
+        使用pearson穢語VIF一樣
         '''
         corr_method = ['pearson', 'spearman', 'kendall']
         f_size = len(X.columns)
@@ -144,9 +146,8 @@ def feature_selection(X, y, method='raw', model=SVC(kernel='rbf', C=10 ),  n_fea
         return X_new, y
         
         
-    elif method == 'Sequential Feature Selection':
+    elif method == 'Sequential_Feature_Selection':
         
-        model = model
         sfs = SFS(model, forward=True, cv=5, floating=False, k_features = n_feature,
                 scoring='recall_weighted', verbose=0, n_jobs=-1)
         sfs.fit(X, y, custom_feature_names=X.columns.values)
@@ -159,10 +160,9 @@ def feature_selection(X, y, method='raw', model=SVC(kernel='rbf', C=10 ),  n_fea
         return X_new, y 
             
             
-    elif method == 'Exhaustive Feature Selection':
+    elif method == 'Exhaustive_Feature_Selection':
         '''跑很久'''
         
-        model = model
         efs = EFS(model, cv=5, min_features=50, max_features=60, scoring='recall_weighted', n_jobs=-1)
         efs.fit(X, y, custom_feature_names=X.columns.values)
         print('Best score achieved:{}, Feature\'s names: {}\n'.format(efs.best_score_, efs.best_feature_names_))
@@ -173,21 +173,26 @@ def feature_selection(X, y, method='raw', model=SVC(kernel='rbf', C=10 ),  n_fea
         
     elif method == 'Treebased_embedded_approach':
         threshold = 0.001 # threshold: float, threshold value for Treebased_embedded_approach - feature_importances
-        model = ExtraTreesClassifier(n_estimators=50)
-        model.fit(X, y)
-        for i, imp in enumerate(model.feature_importances_):
-            print('{} = {}'.format(X.columns[i], imp)) 
-            
-        #drop feature
-        feature_importances = model.feature_importances_
-        drop_columns = X.columns[feature_importances < threshold]
-        X_new = X.drop(drop_columns, axis=1)
+        try:
+            model.fit(X, y)
+            for i, imp in enumerate(model.feature_importances_):
+                print('{} = {}'.format(X.columns[i], imp)) 
+
+            #drop feature
+            feature_importances = model.feature_importances_
+            drop_columns = X.columns[feature_importances < threshold]
+            X_new = X.drop(drop_columns, axis=1)
+        except:
+            print('please use tree_base model')
+            pass
+        
         return X_new, y
     
     elif method == 'raw':
         X_new = X
         return X_new, y
-
+    else:
+        print('error; Please use. correct method')
             
             
 df = pd.read_csv('data.csv (1).zip')
