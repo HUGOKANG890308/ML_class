@@ -7,7 +7,8 @@ from sklearn.model_selection import KFold,StratifiedKFold, LeaveOneOut
 from sklearn.model_selection import StratifiedShuffleSplit
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.preprocessing import StandardScaler
-
+from imblearn.over_sampling import RandomOverSampler, RandomUnderSampler, SMOTE, ADASYN
+from imblearn.combine import SMOTEENN
 
 df = pd.read_csv('data.csv')
 X = df.drop(['Bankrupt?'], axis = 1)
@@ -268,23 +269,43 @@ def feature_selection(X, y, method='raw', model=SVC(kernel='rbf', C=10 ),  n_fea
     
     return X_new, y
 
-def imblance_data(training_data,validation_data,testing_data,method='what method you use'):
+def imblance_data(X_train, y_train, sample_no, random_state = random_state):
     '''
-    training_data: input training data(data after feature selection) ; type: pandas dataframe
-    validation_data: input training data(data after feature selection) ; type: pandas dataframe
-    testing_data: input training data(data after feature selection) ; type: pandas dataframe
+    X_train: input training data ; type: pandas dataframe
+    y_train: input training label ; type: pandas dataframe
+    sample_no: input input sampling method; type: int
     method: 
-            1. over sampling
-            2. under sampling
+            1. ROS
+            2. RUS
             3. SMOTE
             4. ADASYN
+            5. SMOTETomek
     '''
+    if sample_no == 6:
+        X_res = X_train
+        y_res = y_train
+    else:
+        if sample_no == 1:
+            sample = RandomOverSampler(sampling_strategy='not majority', random_state = random_state)
+        elif sample_no == 2:
+            sample = RandomUnderSampler(sampling_strategy = 'majority', random_state = random_state)
+        elif sample_no == 3:
+            sample = SMOTE(sampling_strategy='not majority', random_state = random_state, n_jobs=-1)
+        elif sample_no == 4:
+            sample = ADASYN(sampling_strategy='not majority', random_state = random_state, n_jobs=-1)
+        elif sample_no == 5:
+            sample = SMOTEENN(sampling_strategy='not majority', smote=SMOTE(sampling_strategy='not majority', 
+                                                                  random_state = random_state, n_jobs=-1))
+        
+        X_res, y_res = sample.fit_resample(X_train, y_train)     
+   
+    
+        
     '''
-    training_data: training data after imblance ; type: pandas dataframe
-    validation_data: validation data after imblance ; type: pandas dataframe
-    testing_data: testing data after imblance ; type: pandas dataframe
+    X_res: input training data ; type: pandas dataframe
+    y_res: input training label ; type: pandas dataframe
     '''
-    return training_data,validation_data,testing_data
+    return X_res, y_res
 
 
 
