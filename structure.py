@@ -3,49 +3,102 @@ import pandas as pd
 import numpy as np
 from sklearn.datasets import make_classification
 from sklearn.model_selection import train_test_split
+from sklearn.model_selection import KFold,StratifiedKFold, LeaveOneOut
+from sklearn.model_selection import StratifiedShuffleSplit
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import StandardScaler
 
-def train_test_spiltting(data,test_size=0.2,random_state=0):
+
+df = pd.read_csv('data.csv')
+X = df.drop(['Bankrupt?'], axis = 1)
+Y = df['Bankrupt?']
+print(f'X is {X}, X.shape is {X.shape}\n\n')
+print(f'Y is {Y}, Y.shape is {Y.shape}\n\n')
+
+#x_train, x_test, y_train, y_test = train_test_split(X, Y, test_size = our_test_size, random_state = our_random_state)
+#x_train, x_validation, y_train, y_validation = train_test_split(x_train, y_train, test_size = our_validation_size, random_state = our_random_state)
+
+def splitting_train_validation_StratifiedKFold(X, Y, n, our_random_state = None, our_shuffle = False):
     '''
-    data: input raw data ; type: pandas dataframe
-    test_size: size of training data ; type: float; default: 0.2
-    random_state: random state ; type: int; default: 0
-    '''
-    '''
-    train_data: training data ; type: pandas dataframe
-    test_data: testing data ; type: pandas dataframe
-    '''
-    return train_data,test_data
+    切出stratifiedkfold的train validation data
+    可以用在unbalanced data上 因為在分的時候會讓unbalanced data平均分在每個fold裡
+    input:
+        X = 資料 (非 target) ; type = pandas dataframe
+        Y = 資料 (target) ; type = pandas dataframe
+        method = the method that used to split training data and validation data ; type = string
+            1. KFold
+            2. StratifiedKFold
+            3. LeaveOneOut
+        n = size of n_split ; type = int
+        our_random_state = random state ; type = int ; default = None
+        our_shuffle = shuffle ; type = bool ; default = False
     
-def train_val_spiltting(train_data,val_size=0.2,random_state=0):
-    '''
-    train_data: input raw data ; type: pandas dataframe
-    val_size: size of validation data ; type: float; default: 0.2
-    random_state: random state ; type: int; default: 0
-    '''
-    '''
-    train_data: training data ; type: pandas dataframe
-    val_data: validation data ; type: pandas dataframe
-    '''
-    return train_data,val_data
-
+    output:
+        x_train = training data of x ; type = pandas dataframe
+        x_validation = validation data of x ; type = pandas dataframe
+        y_train = training data of y ; type = pandas dataframe
+        y_validation = validation data of y ; type = pandas dataframe
+    '''   
     
+   StratifiedKFold_result = StratifiedKFold(n_splits = n, random_state = our_random_state, shuffle = our_shuffle)
+    
+   for train_index, validate_index in StratifiedKFold_result.split(X, Y):
+       print("Train index:", train_index, "Test index:", validate_index)
+       x_train_raw, x_validation_raw = X.iloc[train_index], X.iloc[validate_index]
+       y_train_raw, y_validation_raw = Y.iloc[train_index], Y.iloc[validate_index]
+    
+    print('/n/n')
+    x_train = x_train_raw.values
+    x_validation = x_validation_raw.values
+    y_train = y_train_raw.values
+    y_validation = y_validation_raw.values
+    
+    #print(f'x_train is {x_train}, x_train.shape is {x_train.shape}\n\n')
+    #print(f'x_validation is {x_validation}, x_validation.shape is {x_validation.shape}\n\n')
+    #print(f'y_train is {y_train}, y_train.shape is {y_train.shape}\n\n')
+    #print(f'y_validation is {y_validation}, y_validation.shape is {y_validation.shape}\n\n')
+        
+    return x_train, x_validation, y_train, y_validation
 
-def standardize(training_data,validation_data,testing_data,method='what method you use'):
+def standardize(x_training_data, x_validation_data, x_testing_data, method): 
     '''
-    training_data: input training data(data after spiltting) ; type: pandas dataframe
-    validation_data: input training data(data after spiltting) ; type: pandas dataframe
-    testing_data: input training data(data after spiltting) ; type: pandas dataframe
-    method: input method you use to standardize data ; type: string
-            1. standardize the data
-            2. minmax the data
+    標準化資料，只丟x進來
+    input:
+        x_training_data = input training data(data after spiltting) ; type = pandas dataframe
+        x_validation_data = input validation data(data after spiltting) ; type = pandas dataframe
+        x_testing_data = input testing data(data after spiltting) ; type = pandas dataframe
+        method = input method you use to standardize data ; type = string
+                1. standardize the data
+                2. minmax the data
+
+    output:
+        x_training_data = training data after standardize ; type = pandas dataframe
+        x_validation_data = validation data after standardize ; type = pandas dataframe
+        x_testing_data = testing data after standardize ; type = pandas dataframe
     '''
 
-    '''
-    training_data: training data after standardize ; type: pandas dataframe
-    validation_data: validation data after standardize ; type: pandas dataframe
-    testing_data: testing data after standardize ; type: pandas dataframe
-    '''
-    return training_data,validation_data,testing_data
+    if method == 'z_score_normalization':
+        temp = StandardScaler()
+        
+        #training_data  = (zscore_training  + 3)/6
+        #validation_data  = (zscore_validation  + 3)/6
+        #testing_data  = (zscore_testing  + 3)/6
+        
+    elif method == 'min_max':
+        temp =  MinMaxScaler()
+    else:
+        print('wrong input of method /n/n')
+        exit      
+  
+    try:
+        x_training_data  = temp.fit_transform(x_training_data)
+        x_validation_data  = temp.transform(x_validation_data)
+        x_testing_data  = temp.transform(x_testing_data)
+    except:
+        print('please use right method /n/n')
+    
+    return x_training_data, x_validation_data, x_testing_data
+    
    
 def feature_selection(X, y, method='raw', model=SVC(kernel='rbf', C=10 ),  n_feature=30 , random_state=0):
     '''
