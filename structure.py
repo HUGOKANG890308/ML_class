@@ -60,7 +60,7 @@ def splitting_train_validation_StratifiedKFold(X, Y, n, our_random_state = None,
     
     #print(f'x_train is {x_train}, x_train.shape is {x_train.shape}\n\n')
     #print(f'x_validation is {x_validation}, x_validation.shape is {x_validation.shape}\n\n')
-    #print(f'y_train is {y_train}, y_train.shape is {y_train.shape}\n\n')
+    y_train: input training label ; type: pandas dataframe
     #print(f'y_validation is {y_validation}, y_validation.shape is {y_validation.shape}\n\n')
         
     return x_train, x_validation, y_train, y_validation
