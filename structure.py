@@ -7,83 +7,309 @@ import optuna
 from sklearn.ensemble import RandomForestClassifier
 from xgboost import XGBClassifier
 from sklearn.svm import SVC
+from sklearn.model_selection import KFold,StratifiedKFold, LeaveOneOut
+from sklearn.model_selection import StratifiedShuffleSplit
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import StandardScaler
+from imblearn.over_sampling import RandomOverSampler, RandomUnderSampler, SMOTE, ADASYN
+from imblearn.combine import SMOTEENN
 
-def train_test_spiltting(data,test_size=0.2,random_state=0):
+df = pd.read_csv('data.csv')
+X = df.drop(['Bankrupt?'], axis = 1)
+Y = df['Bankrupt?']
+print(f'X is {X}, X.shape is {X.shape}\n\n')
+print(f'Y is {Y}, Y.shape is {Y.shape}\n\n')
+
+#x_train, x_test, y_train, y_test = train_test_split(X, Y, test_size = our_test_size, random_state = our_random_state)
+#x_train, x_validation, y_train, y_validation = train_test_split(x_train, y_train, test_size = our_validation_size, random_state = our_random_state)
+
+def splitting_train_validation_StratifiedKFold(X, Y, n, our_random_state = None, our_shuffle = False):
     '''
-    data: input raw data ; type: pandas dataframe
-    test_size: size of training data ; type: float; default: 0.2
-    random_state: random state ; type: int; default: 0
-    '''
-    '''
-    train_data: training data ; type: pandas dataframe
-    test_data: testing data ; type: pandas dataframe
-    '''
-    return train_data,test_data
+    切出stratifiedkfold的train validation data
+    可以用在unbalanced data上 因為在分的時候會讓unbalanced data平均分在每個fold裡
+    input:
+        X = 資料 (非 target) ; type = pandas dataframe
+        Y = 資料 (target) ; type = pandas dataframe
+        method = the method that used to split training data and validation data ; type = string
+            1. KFold
+            2. StratifiedKFold
+            3. LeaveOneOut
+        n = size of n_split ; type = int
+        our_random_state = random state ; type = int ; default = None
+        our_shuffle = shuffle ; type = bool ; default = False
     
-def train_val_spiltting(train_data,val_size=0.2,random_state=0):
-    '''
-    train_data: input raw data ; type: pandas dataframe
-    val_size: size of validation data ; type: float; default: 0.2
-    random_state: random state ; type: int; default: 0
-    '''
-    '''
-    train_data: training data ; type: pandas dataframe
-    val_data: validation data ; type: pandas dataframe
-    '''
-    return train_data,val_data
-
+    output:
+        x_train = training data of x ; type = pandas dataframe
+        x_validation = validation data of x ; type = pandas dataframe
+        y_train = training data of y ; type = pandas dataframe
+        y_validation = validation data of y ; type = pandas dataframe
+    '''   
     
+   StratifiedKFold_result = StratifiedKFold(n_splits = n, random_state = our_random_state, shuffle = our_shuffle)
+    
+   for train_index, validate_index in StratifiedKFold_result.split(X, Y):
+       print("Train index:", train_index, "Test index:", validate_index)
+       x_train_raw, x_validation_raw = X.iloc[train_index], X.iloc[validate_index]
+       y_train_raw, y_validation_raw = Y.iloc[train_index], Y.iloc[validate_index]
+    
+    print('/n/n')
+    x_train = x_train_raw.values
+    x_validation = x_validation_raw.values
+    y_train = y_train_raw.values
+    y_validation = y_validation_raw.values
+    
+    #print(f'x_train is {x_train}, x_train.shape is {x_train.shape}\n\n')
+    #print(f'x_validation is {x_validation}, x_validation.shape is {x_validation.shape}\n\n')
+    #print(f'y_train is {y_train}, y_train.shape is {y_train.shape}\n\n')
+    #print(f'y_validation is {y_validation}, y_validation.shape is {y_validation.shape}\n\n')
+        
+    return x_train, x_validation, y_train, y_validation
 
-def standardize(training_data,validation_data,testing_data,method='what method you use'):
+def standardize(x_training_data, x_validation_data, x_testing_data, method): 
     '''
-    training_data: input training data(data after spiltting) ; type: pandas dataframe
-    validation_data: input training data(data after spiltting) ; type: pandas dataframe
-    testing_data: input training data(data after spiltting) ; type: pandas dataframe
-    method: input method you use to standardize data ; type: string
-            1. standardize the data
-            2. minmax the data
+    標準化資料，只丟x進來
+    input:
+        x_training_data = input training data(data after spiltting) ; type = pandas dataframe
+        x_validation_data = input validation data(data after spiltting) ; type = pandas dataframe
+        x_testing_data = input testing data(data after spiltting) ; type = pandas dataframe
+        method = input method you use to standardize data ; type = string
+                1. standardize the data
+                2. minmax the data
+
+    output:
+        x_training_data = training data after standardize ; type = pandas dataframe
+        x_validation_data = validation data after standardize ; type = pandas dataframe
+        x_testing_data = testing data after standardize ; type = pandas dataframe
     '''
 
-    '''
-    training_data: training data after standardize ; type: pandas dataframe
-    validation_data: validation data after standardize ; type: pandas dataframe
-    testing_data: testing data after standardize ; type: pandas dataframe
-    '''
-    return training_data,validation_data,testing_data
+    if method == 'z_score_normalization':
+        temp = StandardScaler()
+        
+        #training_data  = (zscore_training  + 3)/6
+        #validation_data  = (zscore_validation  + 3)/6
+        #testing_data  = (zscore_testing  + 3)/6
+        
+    elif method == 'min_max':
+        temp =  MinMaxScaler()
+    else:
+        print('wrong input of method /n/n')
+        exit      
+  
+    try:
+        x_training_data  = temp.fit_transform(x_training_data)
+        x_validation_data  = temp.transform(x_validation_data)
+        x_testing_data  = temp.transform(x_testing_data)
+    except:
+        print('please use right method /n/n')
+    
+    return x_training_data, x_validation_data, x_testing_data
+    
    
-def feature_selection(training_data,validation_data,testing_data,method='what method you use'):
+def feature_selection(X, y, method='raw', model=SVC(kernel='rbf', C=10 ),  n_feature=30 , random_state=0):
     '''
-    training_data: input training data(data after standardize) ; type: pandas dataframe
-    validation_data: input training data(data after standardize) ; type: pandas dataframe
-    testing_data: input training data(data after standardize) ; type: pandas dataframe
-    method: 
-            1. drop features by domain knowledge
-            2. wrapper method or filter method or embedded method
-    '''
-    '''
-    training_data: training data after feature selection ; type: pandas dataframe
-    validation_data: validation data after feature selection ; type: pandas dataframe
-    testing_data: testing data after feature selection ; type: pandas dataframe
-    '''
-    return training_data,validation_data,testing_data
+    Input:
+    X: input raw data include all feature; type: pandas dataframe
+    y: input target: type: pandas dataframe
+    method: Method of feature selection, can be one of the following:
+            - 'basic_filter_approach': removes constant and duplicate features
+            - 'mutual_information_approach': selects features with high mutual information scores
+            - 'correlation_filter_approach': removes highly correlated features
+            - 'variance_inflation_factor': removes features with high VIF scores
+            - 'Sequential Feature Selection': selects features using SFS algorithm
+            - 'Exhaustive Feature Selection': selects features using EFS algorithm
+            - 'Treebased_embedded_approach': select feature using Tree base algorithm
+            - 'raw' : select all feature
+    model: Model use in 'Sequential Feature Selection' and 'Exhaustive Feature Selection'; default:SVC(kernel='rbf', C=10)
+    n_feature: number of features ; default: 30
+    random_state: random state ; type: int; default: 0
 
-def imblance_data(training_data,validation_data,testing_data,method='what method you use'):
+    
+    Returns:
+    pandas dataframe with selected features, X_new & y
+
     '''
-    training_data: input training data(data after feature selection) ; type: pandas dataframe
-    validation_data: input training data(data after feature selection) ; type: pandas dataframe
-    testing_data: input training data(data after feature selection) ; type: pandas dataframe
+    
+    npX = np.array(X)
+
+    if method == 'basic_filter_approach':
+        
+        threshold = 0 # threshold: float, threshold value for obtain constant feature
+        drop_feature = []
+        
+        vt = VarianceThreshold(threshold=threshold)
+        vt.fit(X)
+    
+        #obtain constant feature
+        constant_columns = vt.get_support()
+        for i,feature in enumerate(X.columns):
+            if constant_columns[i] == False:
+                drop_feature.append(feature)
+        print('Constant Feature : {}'.format(drop_feature))
+        
+        #obtain duplicate feature
+        X_T = X.T 
+        duplicate_feature = X_T[X_T.duplicated()].index.values
+        print('Duplicated Features={}'.format(duplicate_feature))
+        
+        for feature in duplicate_feature:
+            drop_feature.append(feature)
+            
+        # drop feature
+        X_new = X.drop(drop_feature, axis=1)
+       
+        
+    elif method == 'mutual_information_approach':
+        
+        threshold = 0.001 # threshold: float, threshold value for mutual information score
+        drop_feature = []
+        
+        #obtain feature score
+        score = mutual_info_classif(X, y, random_state=random_state)
+        for i, feature in enumerate(X.columns):
+            print('{}={}'.format(feature, score[i]))
+            
+        #drop feature
+        feature_score = dict(zip(X.columns, score))
+        sorted_feature_score = sorted(feature_score.items(), key=lambda x: x[1], reverse=True)
+        low_score_features = [f[0] for f in sorted_feature_score if f[1] < threshold]
+        X_new = X.drop(low_score_features, axis=1)
+        
+        
+    elif method == 'correlation_filter_approach':
+        ''''
+        無法列印多feature的correlation matrix 建議不要用，
+        用variance_inflation_factor可以得到類似效果
+        '''
+        corr_method = ['pearson', 'spearman', 'kendall']
+        f_size = len(X.columns)
+        h_str = '\t'
+        for s1 in X.columns:
+            h_str = h_str + s1 + '\t'
+        for (corr_idx,corr_str) in enumerate(corr_method):
+            r_str, p_str = '', ''
+            for i1 in range(0, f_size):
+                r_str = r_str + X.columns[i1] + '\t'
+                p_str = p_str + X.columns[i1] + '\t'
+                for i2 in range(0, f_size):
+                    if corr_idx==0:  
+                        res = scipy.stats.pearsonr(npX[:,i1], npX[:,i2])
+                    if corr_idx==1:  
+                        res = scipy.stats.spearmanr(npX[:,i1], npX[:,i2])        
+                    if corr_idx==2:  
+                        res = scipy.stats.kendalltau(npX[:,i1], npX[:,i2])
+                    r_str = r_str + '{:.4f}\t'.format(res[0])
+                    p_str = p_str + '{:.4f}\t'.format(res[1])
+                    r_str = r_str + '\n'
+                    p_str = p_str + '\n'
+
+                print('-'*80, '\n{}\'s correlation'.format(corr_str))
+                print(h_str,'\n',r_str)
+
+                print('\n{}\'s prob for testing non-correlatio'.format(corr_str))
+                print(h_str,'\n',p_str)
+        
+        
+    elif method == 'variance_inflation_factor':
+        
+        threshold = 10
+        f_size = len(X.columns)
+        X = X.assign(const=1)
+        record = 0
+        for i in range(f_size):
+            r_str = ''
+            for i1 in range(0, f_size - 3 + 1):
+                r_str = r_str + X.columns[i1] \
+                        + '\t{:.4f}\t'.format(variance_inflation_factor(X.values,i1)) + '\n'
+            print(r_str)
+            if variance_inflation_factor(X.values,record) > threshold:
+                X.drop([X.columns[record]], axis=1, inplace=True)
+                f_size -= 1
+            else:
+                record += 1
+        X_new = X.drop(['const'], axis=1)
+        
+        
+    elif method == 'Sequential Feature Selection':
+        
+        model = model
+        sfs = SFS(model, forward=True, cv=5, floating=False, k_features = n_feature,
+                scoring='recall_weighted', verbose=0, n_jobs=-1)
+        sfs.fit(X, y, custom_feature_names=X.columns.values)
+        print('Best score achieved:{}, Feature\'s names: {}\n'.format(sfs.k_score_, sfs.k_feature_names_))
+        for i1 in sfs.subsets_:
+            print('{}\n{}\n'.format(i1, sfs.subsets_[i1]))
+        
+        # drop feature
+        X_new = X[sfs.k_feature_names_]
+            
+            
+    elif method == 'Exhaustive Feature Selection':
+        '''跑很久'''
+        
+        model = model
+        efs = EFS(model, cv=5, min_features=50, max_features=60, scoring='recall_weighted', n_jobs=-1)
+        efs.fit(X, y, custom_feature_names=X.columns.values)
+        print('Best score achieved:{}, Feature\'s names: {}\n'.format(efs.best_score_, efs.best_feature_names_))
+    
+        #drop feature
+        X_new = X[sfs.k_feature_names_]      
+
+        
+    elif method == 'Treebased_embedded_approach':
+        threshold = 0.001 # threshold: float, threshold value for Treebased_embedded_approach - feature_importances
+        model = ExtraTreesClassifier(n_estimators=50)
+        model.fit(X, y)
+        for i, imp in enumerate(model.feature_importances_):
+            print('{} = {}'.format(X.columns[i], imp)) 
+            
+        #drop feature
+        feature_importances = model.feature_importances_
+        drop_columns = X.columns[feature_importances < threshold]
+        X_new = X.drop(drop_columns, axis=1)
+        
+    
+    elif method == 'raw':
+        X_new = X
+    
+    return X_new, y
+
+def imblance_data(X_train, y_train, sample_no, random_state = random_state):
+    '''
+    X_train: input training data ; type: pandas dataframe
+    y_train: input training label ; type: pandas dataframe
+    sample_no: input input sampling method; type: int
     method: 
-            1. over sampling
-            2. under sampling
+            1. ROS
+            2. RUS
             3. SMOTE
             4. ADASYN
+            5. SMOTETomek
     '''
+    if sample_no == 6:
+        X_res = X_train
+        y_res = y_train
+    else:
+        if sample_no == 1:
+            sample = RandomOverSampler(sampling_strategy='not majority', random_state = random_state)
+        elif sample_no == 2:
+            sample = RandomUnderSampler(sampling_strategy = 'majority', random_state = random_state)
+        elif sample_no == 3:
+            sample = SMOTE(sampling_strategy='not majority', random_state = random_state, n_jobs=-1)
+        elif sample_no == 4:
+            sample = ADASYN(sampling_strategy='not majority', random_state = random_state, n_jobs=-1)
+        elif sample_no == 5:
+            sample = SMOTEENN(sampling_strategy='not majority', smote=SMOTE(sampling_strategy='not majority', 
+                                                                  random_state = random_state, n_jobs=-1))
+        
+        X_res, y_res = sample.fit_resample(X_train, y_train)     
+   
+    
+        
     '''
-    training_data: training data after imblance ; type: pandas dataframe
-    validation_data: validation data after imblance ; type: pandas dataframe
-    testing_data: testing data after imblance ; type: pandas dataframe
+    X_res: input training data ; type: pandas dataframe
+    y_res: input training label ; type: pandas dataframe
     '''
-    return training_data,validation_data,testing_data
+    return X_res, y_res
 
 def evaluation(y_test, y_pred):
     '''
