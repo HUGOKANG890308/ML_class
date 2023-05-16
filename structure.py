@@ -518,8 +518,8 @@ class NN_model(torch.nn.Module):
         x = self.hidden1(x)
         x = torch.sigmoid(x)
         x = self.hidden2(x)
-        #x = torch.sigmoid(x)
-        #x = self.hidden3(x)
+        x = torch.sigmoid(x)
+        x = self.hidden3(x)
         x = torch.sigmoid(self.output(x))
         return x
     
