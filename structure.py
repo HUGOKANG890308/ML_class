@@ -361,10 +361,16 @@ df = basic_ml(using_model={'xgb': XGBClassifier(), 'rf': RandomForestClassifier(
 )}, X_train, y_train, X_test, y_test)
 '''
 
+<<<<<<< HEAD
 def objective(trial, method, clf):
     '''
     method: input using model; type: string
     clf: input using model; type: sklearn model
+=======
+def objective(trial, method='svm'):
+    '''
+    method: input using model; type: string
+>>>>>>> e9609f7dfbc0279cd0a51df6db70d28dcfe8b2d4
     '''
     if method == 'svm':
         C = trial.suggest_loguniform('C', 1e-5, 1e5)
@@ -398,6 +404,7 @@ def objective(trial, method, clf):
     '''
     return scores
 
+<<<<<<< HEAD
 def study(method='svm', n_trials=10):
     '''
     method : input using model; type: string, default: 'xgb'
@@ -413,6 +420,59 @@ def study(method='svm', n_trials=10):
     '''
     output: best params of model type: dictionary
     '''
+=======
+def objective_nn(trial):
+    
+    '''
+    optuna for deep learning model
+    使用前請先將train validation test set 轉換為pytorch dataloader
+    '''
+    # Define the hyperparameter search space
+    hidden_size1 = trial.suggest_int('hidden_size1', 2, 64)
+    hidden_size2 = trial.suggest_int('hidden_size2', 2, 64)
+    hidden_size3 = trial.suggest_int('hidden_size3', 2, 64)
+    hidden_size4 = trial.suggest_int('hidden_size4', 2, 64)
+    learning_rate = trial.suggest_loguniform('learning_rate', 0.01, 0.5)
+    
+    # Create a new instance of the model with the suggested hyperparameters
+    model = NN_model(input_size, hidden_size1, hidden_size2, hidden_size3,  output_size)
+    
+    # Define the loss function and optimizer
+    criterion = torch.nn.BCELoss()
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    
+    # Training loop
+    model.train()
+    for epoch in range(num_epochs):
+        for X_train, y_train in train_loader:
+            optimizer.zero_grad()  
+            outputs = model(X_train)
+            loss = criterion(outputs, y_train.unsqueeze(1))
+            loss.backward()
+            optimizer.step()
+    
+    # Evaluation on the validation set
+    model.eval()
+    predictions = []
+    y_valids = []
+    with torch.no_grad():
+        for x_valid, y_valid in valid_loader:
+            outputs = model(x_valid)
+            predictions.extend(outputs.round().squeeze().tolist())
+            y_valids.extend(y_valid.round().squeeze().tolist())
+    # Calculate F1 score
+    score = fbeta_score(y_valids, predictions)
+    
+    return score
+
+def study(method='svm', n_trials=10):
+    '''
+    method : input using model; type: string, default: 'svm'
+    n_trials : input number of trials; type: int
+    '''
+    study = optuna.create_study()
+    study.optimize(lambda trial: objective(trial, method=method), n_trials=n_trials)
+>>>>>>> e9609f7dfbc0279cd0a51df6db70d28dcfe8b2d4
     return study.best_params
 '''
 example of using study
@@ -423,12 +483,31 @@ basic_ml(using_model={'xgb': XGBClassifier(**study(method='rf', n_trials=10)),'x
 '''
 
 
-def deep_learning_model():
+class NN_model(torch.nn.Module):
     '''
-    deep learning model,
-    how to do please think by yourself
+    deep learning model
+    使用前請自訂超參數
+    num_epochs, batch_size, input_size, hidden_size, output_size 
+    '''
     
-    '''
+    def __init__(self, input_size, hidden_size1, hidden_size2, hidden_size3, output_size):
+        super(NN_model, self).__init__()
+        self.input = torch.nn.Linear(input_size, hidden_size1)
+        self.hidden1 = torch.nn.Linear(hidden_size1, hidden_size2)
+        self.hidden2 = torch.nn.Linear(hidden_size2, hidden_size3)
+        self.hidden3 = torch.nn.Linear(hidden_size3, hidden_size4)
+        self.output = torch.nn.Linear(hidden_size3, output_size)
+        
+    def forward(self, x):
+        x = self.input(x)
+        x = torch.sigmoid(x)
+        x = self.hidden1(x)
+        x = torch.sigmoid(x)
+        x = self.hidden2(x)
+        x = torch.sigmoid(x)
+        x = self.hidden3(x)
+        x = torch.sigmoid(self.output(x))
+        return x
     
 
 if __name__ == '__main__':
