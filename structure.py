@@ -354,48 +354,6 @@ def basic_ml(using_model = dict, X_train, y_train, X_test, y_test ):
     return pd.DataFrame(data = score, columns = ['model', 'accuracy', 
                                                  'f1_score', 'precision', 'recall', 'auc', 'f_beta'])
 
-def evaluation(y_test, y_pred):
-    '''
-    to return metrics score
-
-    input:
-        y_test: input true label; type: pandas dataframe
-        y_pred: input prediction; type: pandas dataframe
-
-    output:
-        evaluation result; type: tuple
-    '''
-    ac = round(accuracy_score(y_test, y_pred), 4)
-    f1 = round(f1_score(y_test, y_pred), 4)
-    pre = round(precision_score(y_test, y_pred), 4)
-    rec = round(recall_score(y_test, y_pred), 4)
-    auc = round(roc_auc_score(y_test, y_pred), 4)
-    f_beta = round(fbeta_score(y_test, y_pred, beta=3), 4)
-
-    return ac, f1, pre, rec, auc, f_beta
-
-
-def basic_ml(using_model={'xgb': XGBClassifier(), 'rf': RandomForestClassifier()},
-             X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test):
-    '''
-    to return evaluate dataframe
-    input:
-        using_model: input using model; type: dictionary
-        x_train: input x_train; type: numpy.ndarray or dataframe
-        y_train: input y_train; type: numpy.ndarray or dataframe
-        x_test: input x_test; type: numpy.ndarray  or dataframe
-        y_test: input y_test; type: numpy.ndarray  or dataframe
-
-    output:
-        evaluate dataframe
-    '''
-    score = []
-    for i in using_model:
-        model = using_model[i]
-        model.fit(X_train, y_train)
-        y_pred = model.predict(X_test)
-        score.append([i]+list(evaluation(y_test, y_pred)))
-    return pd.DataFrame(data=score, columns=['model', 'accuracy', 'f1_score', 'precision', 'recall', 'auc', 'f_beta'])
 
 # example of using basic_ml
 '''
@@ -403,25 +361,24 @@ df = basic_ml(using_model={'xgb': XGBClassifier(), 'rf': RandomForestClassifier(
 )}, X_train, y_train, X_test, y_test)
 '''
 
-def objective(trial, method='svm'):
+def objective(trial, method, clf):
+    '''
+    method: input using model; type: string
+    clf: input using model; type: sklearn model
+    '''
     if method == 'svm':
         C = trial.suggest_loguniform('C', 1e-5, 1e5)
         kernel = trial.suggest_categorical(
             'kernel', ['linear', 'poly', 'rbf', 'sigmoid'])
         degree = trial.suggest_int('degree', 2, 5)
-        clf = SVC(C=C, kernel=kernel, degree=degree)
-        clf.fit(X_train, y_train)
+
     elif method == 'rf':
         max_depth = trial.suggest_int("max_depth", 2, 128)
         min_samples_split = trial.suggest_int("min_samples_split", 2, 128)
         max_leaf_nodes = int(trial.suggest_int("max_leaf_nodes", 2, 128))
         min_samples_leaf = int(trial.suggest_int('min_samples_leaf', 2, 128))
         criterion = trial.suggest_categorical("criterion", ["gini", "entropy"])
-        clf = RandomForestClassifier(min_samples_split=min_samples_split,
-                                     max_leaf_nodes=max_leaf_nodes,
-                                     criterion=criterion, random_state=4,
-                                     max_depth=max_depth, min_samples_leaf=min_samples_leaf)
-        clf.fit(X_train, y_train)
+        
     elif method == 'xgb':
         max_depth = trial.suggest_int("max_depth", 2, 128)
         min_child_weight = trial.suggest_int("min_child_weight", 2, 128)
@@ -431,21 +388,34 @@ def objective(trial, method='svm'):
             'colsample_bytree', 0.5, 1, 0.1)
         learning_rate = trial.suggest_loguniform('learning_rate', 1e-5, 1e-2)
 
-        clf = XGBClassifier(max_depth=max_depth, min_child_weight=min_child_weight, gamma=gamma, subsample=subsample,
-                            colsample_bytree=colsample_bytree, learning_rate=learning_rate)
-        clf.fit(X_train, y_train)
     else:
         raise ValueError(f"Invalid method '{method}'")
+    clf.fit(X_train, y_train)
     y_pred = clf.predict(X_val)
     scores =fbeta_score(y_val, y_pred, beta=3)
+    '''
+    output:f_beta score
+    '''
     return scores
 
-def study(method='xgb', n_trials=10):
+def study(method='svm', n_trials=10):
+    '''
+    method : input using model; type: string, default: 'xgb'
+    n_trials : input number of trials; type: int
+    '''
+    clf = {'svm': SVC(C=C, kernel=kernel, degree=degree), 'rf': RandomForestClassifier(min_samples_split=min_samples_split,
+                max_leaf_nodes=max_leaf_nodes, criterion=criterion, random_state=4, max_depth=max_depth,
+                  min_samples_leaf=min_samples_leaf)
+                , 'xgb': XGBClassifier(max_depth=max_depth, min_child_weight=min_child_weight, gamma=gamma, subsample=subsample,
+                colsample_bytree=colsample_bytree, learning_rate=learning_rate)}
     study = optuna.create_study()
-    study.optimize(lambda trial: objective(trial, method='xgb'), n_trials=n_trials)
+    study.optimize(lambda trial: objective(trial, method, clf[method]), n_trials=n_trials)
+    '''
+    output: best params of model type: dictionary
+    '''
     return study.best_params
 '''
-example of using optuna
+example of using study
 basic_ml(using_model={'xgb': XGBClassifier(**study(method='rf', n_trials=10)),'xgb1':XGBClassifier()},
  X_train=pd.concat([X_train, X_val], axis=0), y_train=pd.concat([y_train, y_val], axis=0), 
  X_test=X_test, y_test=y_test)
