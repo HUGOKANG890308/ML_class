@@ -361,16 +361,10 @@ df = basic_ml(using_model={'xgb': XGBClassifier(), 'rf': RandomForestClassifier(
 )}, X_train, y_train, X_test, y_test)
 '''
 
-<<<<<<< HEAD
 def objective(trial, method, clf):
     '''
     method: input using model; type: string
     clf: input using model; type: sklearn model
-=======
-def objective(trial, method='svm'):
-    '''
-    method: input using model; type: string
->>>>>>> e9609f7dfbc0279cd0a51df6db70d28dcfe8b2d4
     '''
     if method == 'svm':
         C = trial.suggest_loguniform('C', 1e-5, 1e5)
@@ -404,7 +398,6 @@ def objective(trial, method='svm'):
     '''
     return scores
 
-<<<<<<< HEAD
 def study(method='svm', n_trials=10):
     '''
     method : input using model; type: string, default: 'xgb'
@@ -420,7 +413,14 @@ def study(method='svm', n_trials=10):
     '''
     output: best params of model type: dictionary
     '''
-=======
+    return study.best_params
+'''
+example of using study
+basic_ml(using_model={'xgb': XGBClassifier(**study(method='rf', n_trials=10)),'xgb1':XGBClassifier()},
+ X_train=pd.concat([X_train, X_val], axis=0), y_train=pd.concat([y_train, y_val], axis=0), 
+ X_test=X_test, y_test=y_test)
+
+'''
 def objective_nn(trial):
     
     '''
@@ -464,24 +464,6 @@ def objective_nn(trial):
     score = fbeta_score(y_valids, predictions)
     
     return score
-
-def study(method='svm', n_trials=10):
-    '''
-    method : input using model; type: string, default: 'svm'
-    n_trials : input number of trials; type: int
-    '''
-    study = optuna.create_study()
-    study.optimize(lambda trial: objective(trial, method=method), n_trials=n_trials)
->>>>>>> e9609f7dfbc0279cd0a51df6db70d28dcfe8b2d4
-    return study.best_params
-'''
-example of using study
-basic_ml(using_model={'xgb': XGBClassifier(**study(method='rf', n_trials=10)),'xgb1':XGBClassifier()},
- X_train=pd.concat([X_train, X_val], axis=0), y_train=pd.concat([y_train, y_val], axis=0), 
- X_test=X_test, y_test=y_test)
-
-'''
-
 
 class NN_model(torch.nn.Module):
     '''
