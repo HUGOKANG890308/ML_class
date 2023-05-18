@@ -484,9 +484,13 @@ def objective_nn(trial):
     
     return score
 
-def study(method='xgb', n_trials=10):
+def study(method='svm', n_trials=10):
+    '''
+    method : input using model; type: string, default: 'svm'
+    n_trials : input number of trials; type: int
+    '''
     study = optuna.create_study()
-    study.optimize(lambda trial: objective(trial, method='xgb'), n_trials=n_trials)
+    study.optimize(lambda trial: objective(trial, method=method), n_trials=n_trials)
     return study.best_params
 '''
 example of using optuna
