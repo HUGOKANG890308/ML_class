@@ -1,18 +1,24 @@
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, fbeta_score
 import pandas as pd
 import numpy as np
-from sklearn.datasets import make_classification
 from sklearn.model_selection import train_test_split
 import optuna
 from sklearn.ensemble import RandomForestClassifier
 from xgboost import XGBClassifier
 from sklearn.svm import SVC
 from sklearn.model_selection import KFold,StratifiedKFold, LeaveOneOut
-from sklearn.model_selection import StratifiedShuffleSplit
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.preprocessing import StandardScaler
 from imblearn.over_sampling import RandomOverSampler, RandomUnderSampler, SMOTE, ADASYN
 from imblearn.combine import SMOTEENN
+from sklearn.feature_selection import VarianceThreshold
+from sklearn.svm import SVC
+from sklearn.feature_selection import mutual_info_classif
+import scipy
+from statsmodels.stats.outliers_influence import variance_inflation_factor
+from mlxtend.feature_selection import SequentialFeatureSelector as SFS
+from mlxtend.feature_selection import ExhaustiveFeatureSelector as EFS
+from sklearn.ensemble import ExtraTreesClassifier
 
 df = pd.read_csv('data.csv')
 X = df.drop(['Bankrupt?'], axis = 1)
