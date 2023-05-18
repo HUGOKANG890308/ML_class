@@ -404,6 +404,9 @@ df = basic_ml(using_model={'xgb': XGBClassifier(), 'rf': RandomForestClassifier(
 '''
 
 def objective(trial, method='svm'):
+    '''
+    method: input using model; type: string
+    '''
     if method == 'svm':
         C = trial.suggest_loguniform('C', 1e-5, 1e5)
         kernel = trial.suggest_categorical(
