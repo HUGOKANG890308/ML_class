@@ -380,7 +380,7 @@ df = basic_ml(using_model={'xgb': XGBClassifier(), 'rf': RandomForestClassifier(
 )}, X_train, y_train, X_test, y_test)
 '''
 
-def objective(trial, method, clf):
+def objective(trial, method):
     '''
     method: input using model; type: string
     clf: input using model; type: sklearn model
@@ -390,6 +390,7 @@ def objective(trial, method, clf):
         kernel = trial.suggest_categorical(
             'kernel', ['linear', 'poly', 'rbf', 'sigmoid'])
         degree = trial.suggest_int('degree', 2, 5)
+        clf=SVC(C=C, kernel=kernel, degree=degree)
 
     elif method == 'rf':
         max_depth = trial.suggest_int("max_depth", 2, 128)
@@ -397,7 +398,9 @@ def objective(trial, method, clf):
         max_leaf_nodes = int(trial.suggest_int("max_leaf_nodes", 2, 128))
         min_samples_leaf = int(trial.suggest_int('min_samples_leaf', 2, 128))
         criterion = trial.suggest_categorical("criterion", ["gini", "entropy"])
-        
+        clf=RandomForestClassifier(min_samples_split=min_samples_split,
+                max_leaf_nodes=max_leaf_nodes, criterion=criterion, random_state=Random_state, max_depth=max_depth,
+                min_samples_leaf=min_samples_leaf)
     elif method == 'xgb':
         max_depth = trial.suggest_int("max_depth", 2, 128)
         min_child_weight = trial.suggest_int("min_child_weight", 2, 128)
@@ -406,15 +409,11 @@ def objective(trial, method, clf):
         colsample_bytree = trial.suggest_discrete_uniform(
             'colsample_bytree', 0.5, 1, 0.1)
         learning_rate = trial.suggest_loguniform('learning_rate', 1e-5, 1e-2)
-
+        clf=XGBClassifier(max_depth=max_depth, min_child_weight=min_child_weight, gamma=gamma, subsample=subsample,
+                colsample_bytree=colsample_bytree, learning_rate=learning_rate)
     else:
         raise ValueError(f"Invalid method '{method}'")
-    clf = {'svm': SVC(C=C, kernel=kernel, degree=degree), 'rf': RandomForestClassifier(min_samples_split=min_samples_split,
-                max_leaf_nodes=max_leaf_nodes, criterion=criterion, random_state=4, max_depth=max_depth,
-                  min_samples_leaf=min_samples_leaf)
-                , 'xgb': XGBClassifier(max_depth=max_depth, min_child_weight=min_child_weight, gamma=gamma, subsample=subsample,
-                colsample_bytree=colsample_bytree, learning_rate=learning_rate)}
-    clf[method].fit(X_train, y_train)
+    clf.fit(X_train, y_train)
     y_pred = clf.predict(X_val)
     scores =fbeta_score(y_val, y_pred, beta=3)
     '''
@@ -427,18 +426,13 @@ def study(method='svm', n_trials=10):
     method : input using model; type: string, default: 'xgb'
     n_trials : input number of trials; type: int
     '''
-    clf = {'svm': SVC(C=C, kernel=kernel, degree=degree), 'rf': RandomForestClassifier(min_samples_split=min_samples_split,
-                max_leaf_nodes=max_leaf_nodes, criterion=criterion, random_state=4, max_depth=max_depth,
-                  min_samples_leaf=min_samples_leaf)
-                , 'xgb': XGBClassifier(max_depth=max_depth, min_child_weight=min_child_weight, gamma=gamma, subsample=subsample,
-                colsample_bytree=colsample_bytree, learning_rate=learning_rate)}
     study = optuna.create_study()
-    study.optimize(lambda trial: objective(trial, method, clf[method]), n_trials=n_trials)
+    study.optimize(lambda trial: objective(trial, method), n_trials=n_trials)
     '''
     output: best params of model type: dictionary
     '''
     return study.best_params
-basic_ml(using_model={'xgb': XGBClassifier(**study(method='rf', n_trials=10)),'xgb1':XGBClassifier()},
+basic_ml(using_model={'xgb': XGBClassifier(**study(method='xgb', n_trials=10)),'xgb1':XGBClassifier()},
  X_train=pd.concat([X_train, X_val], axis=0), y_train=pd.concat([y_train, y_val], axis=0), 
  X_test=X_test, y_test=y_test)
 '''
