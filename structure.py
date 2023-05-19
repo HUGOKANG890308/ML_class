@@ -9,7 +9,8 @@ from sklearn.svm import SVC
 from sklearn.model_selection import KFold,StratifiedKFold, LeaveOneOut
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.preprocessing import StandardScaler
-from imblearn.over_sampling import RandomOverSampler, RandomUnderSampler, SMOTE, ADASYN
+from imblearn.over_sampling import RandomOverSampler, SMOTE, ADASYN
+from imblearn.under_sampling import RandomUnderSampler
 from imblearn.combine import SMOTEENN
 from sklearn.feature_selection import VarianceThreshold
 from sklearn.svm import SVC
