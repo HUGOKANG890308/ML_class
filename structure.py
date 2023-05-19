@@ -1,51 +1,128 @@
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, fbeta_score
 import pandas as pd
 import numpy as np
-from sklearn.datasets import make_classification
 from sklearn.model_selection import train_test_split
+import optuna
+from sklearn.ensemble import RandomForestClassifier
+from xgboost import XGBClassifier
+from sklearn.svm import SVC
+from sklearn.model_selection import KFold,StratifiedKFold, LeaveOneOut
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import StandardScaler
+from imblearn.over_sampling import RandomOverSampler, SMOTE, ADASYN
+from imblearn.under_sampling import RandomUnderSampler
+from imblearn.combine import SMOTEENN
+from sklearn.feature_selection import VarianceThreshold
+from sklearn.svm import SVC
+from sklearn.feature_selection import mutual_info_classif
+import scipy
+from statsmodels.stats.outliers_influence import variance_inflation_factor
+from mlxtend.feature_selection import SequentialFeatureSelector as SFS
+from mlxtend.feature_selection import ExhaustiveFeatureSelector as EFS
+from sklearn.ensemble import ExtraTreesClassifier
+import torch
 
-def train_test_spiltting(data,test_size=0.2,random_state=0):
+df = pd.read_csv('data.csv')
+X = df.drop(['Bankrupt?'], axis = 1)
+Y = df['Bankrupt?']
+print(f'X is {X}, X.shape is {X.shape}\n\n')
+print(f'Y is {Y}, Y.shape is {Y.shape}\n\n')
+#parameters of def splitting_train_validation_StratifiedKFold
+our_random_state = 0
+our_shuffle = False
+n=5
+Test_size,Validation_size = 0.2,0.2
+Random_state = 0
+X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size = Test_size, 
+                                                    random_state = Random_state)
+X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, 
+                                                                test_size = Validation_size, 
+                                                                 random_state = Random_state)
+
+#x_train, x_test, y_train, y_test = train_test_split(X, Y, test_size = our_test_size, random_state = our_random_state)
+#x_train, x_validation, y_train, y_validation = train_test_split(x_train, y_train, test_size = our_validation_size, random_state = our_random_state)
+
+def splitting_train_validation_StratifiedKFold(X, Y, n, our_random_state = None, our_shuffle = False):
     '''
-    data: input raw data ; type: pandas dataframe
-    test_size: size of training data ; type: float; default: 0.2
-    random_state: random state ; type: int; default: 0
-    '''
-    '''
-    train_data: training data ; type: pandas dataframe
-    test_data: testing data ; type: pandas dataframe
-    '''
-    return train_data,test_data
+    切出stratifiedkfold的train validation data
+    可以用在unbalanced data上 因為在分的時候會讓unbalanced data平均分在每個fold裡
+    input:
+        X = 資料 (非 target) ; type = pandas dataframe
+        Y = 資料 (target) ; type = pandas dataframe
+        method = the method that used to split training data and validation data ; type = string
+            1. KFold
+            2. StratifiedKFold
+            3. LeaveOneOut
+        n = size of n_split ; type = int
+        our_random_state = random state ; type = int ; default = None
+        our_shuffle = shuffle ; type = bool ; default = False
     
-def train_val_spiltting(train_data,val_size=0.2,random_state=0):
-    '''
-    train_data: input raw data ; type: pandas dataframe
-    val_size: size of validation data ; type: float; default: 0.2
-    random_state: random state ; type: int; default: 0
-    '''
-    '''
-    train_data: training data ; type: pandas dataframe
-    val_data: validation data ; type: pandas dataframe
-    '''
-    return train_data,val_data
-
+    output:
+        x_train = training data of x ; type = pandas dataframe
+        x_validation = validation data of x ; type = pandas dataframe
+        y_train = training data of y ; type = pandas dataframe
+        y_validation = validation data of y ; type = pandas dataframe
+    '''   
+   
+    StratifiedKFold_result = StratifiedKFold(n_splits = n, random_state = our_random_state, shuffle = our_shuffle)
     
+    for train_index, validate_index in StratifiedKFold_result.split(X, Y):
+       print("Train index:", train_index, "Test index:", validate_index)
+       x_train_raw, x_validation_raw = X.iloc[train_index], X.iloc[validate_index]
+       y_train_raw, y_validation_raw = Y.iloc[train_index], Y.iloc[validate_index]
+    
+    print('/n/n')
+    x_train = x_train_raw.values
+    x_validation = x_validation_raw.values
+    y_train = y_train_raw.values
+    y_validation = y_validation_raw.values
+    
+    #print(f'x_train is {x_train}, x_train.shape is {x_train.shape}\n\n')
+    #print(f'x_validation is {x_validation}, x_validation.shape is {x_validation.shape}\n\n')
+    #print(f'y_train is {y_train}, y_train.shape is {y_train.shape}\n\n')
+    #print(f'y_validation is {y_validation}, y_validation.shape is {y_validation.shape}\n\n')
+        
+    return x_train, x_validation, y_train, y_validation
 
-def standardize(training_data,validation_data,testing_data,method='what method you use'):
+def standardize(x_training_data, x_validation_data, x_testing_data, method): 
     '''
-    training_data: input training data(data after spiltting) ; type: pandas dataframe
-    validation_data: input training data(data after spiltting) ; type: pandas dataframe
-    testing_data: input training data(data after spiltting) ; type: pandas dataframe
-    method: input method you use to standardize data ; type: string
-            1. standardize the data
-            2. minmax the data
+    標準化資料，只丟x進來
+    input:
+        x_training_data = input training data(data after spiltting) ; type = pandas dataframe
+        x_validation_data = input validation data(data after spiltting) ; type = pandas dataframe
+        x_testing_data = input testing data(data after spiltting) ; type = pandas dataframe
+        method = input method you use to standardize data ; type = string
+                1. standardize the data
+                2. minmax the data
+
+    output:
+        x_training_data = training data after standardize ; type = pandas dataframe
+        x_validation_data = validation data after standardize ; type = pandas dataframe
+        x_testing_data = testing data after standardize ; type = pandas dataframe
     '''
 
-    '''
-    training_data: training data after standardize ; type: pandas dataframe
-    validation_data: validation data after standardize ; type: pandas dataframe
-    testing_data: testing data after standardize ; type: pandas dataframe
-    '''
-    return training_data,validation_data,testing_data
+    if method == 'z_score_normalization':
+        temp = StandardScaler()
+        
+        #training_data  = (zscore_training  + 3)/6
+        #validation_data  = (zscore_validation  + 3)/6
+        #testing_data  = (zscore_testing  + 3)/6
+        
+    elif method == 'min_max':
+        temp =  MinMaxScaler()
+    else:
+        print('wrong input of method /n/n')
+        exit      
+  
+    try:
+        x_training_data  = temp.fit_transform(x_training_data)
+        x_validation_data  = temp.transform(x_validation_data)
+        x_testing_data  = temp.transform(x_testing_data)
+    except:
+        print('please use right method /n/n')
+    
+    return x_training_data, x_validation_data, x_testing_data
+    
    
 def feature_selection(X, y, method='raw', model=SVC(kernel='rbf', C=10 ),  n_feature=30 , random_state=0):
     '''
@@ -215,25 +292,43 @@ def feature_selection(X, y, method='raw', model=SVC(kernel='rbf', C=10 ),  n_fea
     
     return X_new, y
 
-def imblance_data(training_data,validation_data,testing_data,method='what method you use'):
+def imblance_data(X_train, y_train, sample_no, random_state = our_random_state):
     '''
-    training_data: input training data(data after feature selection) ; type: pandas dataframe
-    validation_data: input training data(data after feature selection) ; type: pandas dataframe
-    testing_data: input training data(data after feature selection) ; type: pandas dataframe
+    X_train: input training data ; type: pandas dataframe
+    y_train: input training label ; type: pandas dataframe
+    sample_no: input input sampling method; type: int
     method: 
-            1. over sampling
-            2. under sampling
+            1. ROS
+            2. RUS
             3. SMOTE
             4. ADASYN
+            5. SMOTETomek
     '''
+    if sample_no == 6:
+        X_res = X_train
+        y_res = y_train
+    else:
+        if sample_no == 1:
+            sample = RandomOverSampler(sampling_strategy='not majority', random_state = random_state)
+        elif sample_no == 2:
+            sample = RandomUnderSampler(sampling_strategy = 'majority', random_state = random_state)
+        elif sample_no == 3:
+            sample = SMOTE(sampling_strategy='not majority', random_state = random_state, n_jobs=-1)
+        elif sample_no == 4:
+            sample = ADASYN(sampling_strategy='not majority', random_state = random_state, n_jobs=-1)
+        elif sample_no == 5:
+            sample = SMOTEENN(sampling_strategy='not majority', smote=SMOTE(sampling_strategy='not majority', 
+                                                                  random_state = random_state, n_jobs=-1))
+        
+        X_res, y_res = sample.fit_resample(X_train, y_train)     
+   
+    
+        
     '''
-    training_data: training data after imblance ; type: pandas dataframe
-    validation_data: validation data after imblance ; type: pandas dataframe
-    testing_data: testing data after imblance ; type: pandas dataframe
+    X_res: input training data ; type: pandas dataframe
+    y_res: input training label ; type: pandas dataframe
     '''
-    return training_data,validation_data,testing_data
-
-
+    return X_res, y_res
 
 def evaluation(y_test, y_pred):
     '''
@@ -255,7 +350,7 @@ def evaluation(y_test, y_pred):
     
     return ac, f1, pre, rec, auc, f_beta
 
-def basic_ml(using_model = dict, X_train, y_train, X_test, y_test ):
+def basic_ml(using_model , X_train, y_train, X_test, y_test ):
     '''
     to return evaluate dataframe
     
@@ -275,74 +370,145 @@ def basic_ml(using_model = dict, X_train, y_train, X_test, y_test ):
         model.fit(X_train, y_train)
         y_pred = model.predict(X_test)
         score.append([i]+list(evaluation(y_test, y_pred)))
-    return pd.DataFrame(data = score, columns = ['model', 'accuracy', 'f1_score', 'precision', 'recall', 'auc', 'f_beta'])
+    return pd.DataFrame(data = score, columns = ['model', 'accuracy', 
+                                                 'f1_score', 'precision', 'recall', 'auc', 'f_beta'])
 
 
-class Classifier(object):
-    def __init__(self,clf, X_train, y_train,X_vaild,y_vaild, X_test, y_test):
-        '''
-        clf: input classifier ; type: sklearn classifier
-            XGBoost, LightGBM, CatBoost, RandomForest,SVM, KNN
-        X_train: input training data ; type: pandas dataframe
-        y_train: input training label ; type: pandas dataframe
-        X_vaild: input validation data ; type: pandas dataframe
-        y_vaild: input validation label ; type: pandas dataframe
-        X_test: input testing data ; type: pandas dataframe
-        y_test: input testing label ; type: pandas dataframe
-        '''
-        self.clf=clf
-        self.X_train=X_train
-        self.y_train=y_train
-        self.X_vaild=X_vaild
-        self.y_vaild=y_vaild
-        self.X_test=X_test
-        self.y_test=y_test
-    def search_best_params(self):
-        '''
-        search best params
-        '''
-        return self.best_params
-    def objective(self,trial,params):
-        '''
-        objective function
-        '''
-        return self.best_score
-    
-    def train(self):
-        '''
-        train model
-        '''
-        return self.clf
-    def predict(self):
-        '''
-        predict result
-        '''
-        return self.y_pred
-    def evaluate(self):
-        '''
-        evaluate model
-        '''
-        return self.evaluation_result
-    def save_model(self):
-        '''
-        save model
-        '''
-        return self.model
-    def main(self):
-        '''
-        main function
-        '''
-        self.best_params=self.search_best_params()
-        self.clf=self.train()
-        self.y_pred=self.predict()
-        self.evaluation_result=self.evaluate()
-        self.model=self.save_model()
-def deep_learning_model():
+# example of using basic_ml
+'''
+df = basic_ml(using_model={'xgb': XGBClassifier(), 'rf': RandomForestClassifier(
+)}, X_train, y_train, X_test, y_test)
+'''
+
+def objective(trial, method):
     '''
-    deep learning model,
-    how to do please think by yourself
+    method: input using model; type: string
+    clf: input using model; type: sklearn model
+    '''
+    if method == 'svm':
+        C = trial.suggest_loguniform('C', 1e-5, 1e5)
+        kernel = trial.suggest_categorical(
+            'kernel', ['linear', 'poly', 'rbf', 'sigmoid'])
+        degree = trial.suggest_int('degree', 2, 5)
+        clf=SVC(C=C, kernel=kernel, degree=degree)
+
+    elif method == 'rf':
+        max_depth = trial.suggest_int("max_depth", 2, 128)
+        min_samples_split = trial.suggest_int("min_samples_split", 2, 128)
+        max_leaf_nodes = int(trial.suggest_int("max_leaf_nodes", 2, 128))
+        min_samples_leaf = int(trial.suggest_int('min_samples_leaf', 2, 128))
+        criterion = trial.suggest_categorical("criterion", ["gini", "entropy"])
+        clf=RandomForestClassifier(min_samples_split=min_samples_split,
+                max_leaf_nodes=max_leaf_nodes, criterion=criterion, random_state=Random_state, max_depth=max_depth,
+                min_samples_leaf=min_samples_leaf)
+    elif method == 'xgb':
+        max_depth = trial.suggest_int("max_depth", 2, 128)
+        min_child_weight = trial.suggest_int("min_child_weight", 2, 128)
+        gamma = trial.suggest_int("gamma", 2, 128)
+        subsample = trial.suggest_discrete_uniform('subsample', 0.5, 1, 0.1)
+        colsample_bytree = trial.suggest_discrete_uniform(
+            'colsample_bytree', 0.5, 1, 0.1)
+        learning_rate = trial.suggest_loguniform('learning_rate', 1e-5, 1e-2)
+        clf=XGBClassifier(max_depth=max_depth, min_child_weight=min_child_weight, gamma=gamma, subsample=subsample,
+                colsample_bytree=colsample_bytree, learning_rate=learning_rate)
+    else:
+        raise ValueError(f"Invalid method '{method}'")
+    clf.fit(X_train, y_train)
+    y_pred = clf.predict(X_val)
+    scores =fbeta_score(y_val, y_pred, beta=3)
+    '''
+    output:f_beta score
+    '''
+    return scores
+
+def study(method='svm', n_trials=10):
+    '''
+    method : input using model; type: string, default: 'xgb'
+    n_trials : input number of trials; type: int
+    '''
+    study = optuna.create_study()
+    study.optimize(lambda trial: objective(trial, method), n_trials=n_trials)
+    '''
+    output: best params of model type: dictionary
+    '''
+    return study.best_params
+
+'''
+example of using study
+basic_ml(using_model={'xgb': XGBClassifier(**study(method='xgb', n_trials=10)),'xgb1':XGBClassifier()},
+ X_train=pd.concat([X_train, X_val], axis=0), y_train=pd.concat([y_train, y_val], axis=0), 
+ X_test=X_test, y_test=y_test)
+
+'''
+def objective_nn(trial):
     
     '''
+    optuna for deep learning model
+    使用前請先將train validation test set 轉換為pytorch dataloader
+    '''
+    # Define the hyperparameter search space
+    hidden_size1 = trial.suggest_int('hidden_size1', 2, 64)
+    hidden_size2 = trial.suggest_int('hidden_size2', 2, 64)
+    hidden_size3 = trial.suggest_int('hidden_size3', 2, 64)
+    hidden_size4 = trial.suggest_int('hidden_size4', 2, 64)
+    learning_rate = trial.suggest_loguniform('learning_rate', 0.01, 0.5)
+    
+    # Create a new instance of the model with the suggested hyperparameters
+    model = NN_model(input_size, hidden_size1, hidden_size2, hidden_size3,  output_size)
+    
+    # Define the loss function and optimizer
+    criterion = torch.nn.BCELoss()
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    
+    # Training loop
+    model.train()
+    for epoch in range(num_epochs):
+        for X_train, y_train in train_loader:
+            optimizer.zero_grad()  
+            outputs = model(X_train)
+            loss = criterion(outputs, y_train.unsqueeze(1))
+            loss.backward()
+            optimizer.step()
+    
+    # Evaluation on the validation set
+    model.eval()
+    predictions = []
+    y_valids = []
+    with torch.no_grad():
+        for x_valid, y_valid in valid_loader:
+            outputs = model(x_valid)
+            predictions.extend(outputs.round().squeeze().tolist())
+            y_valids.extend(y_valid.round().squeeze().tolist())
+    # Calculate F1 score
+    score = fbeta_score(y_valids, predictions)
+    
+    return score
+
+class NN_model(torch.nn.Module):
+    '''
+    deep learning model
+    使用前請自訂超參數
+    num_epochs, batch_size, input_size, hidden_size, output_size 
+    '''
+    
+    def __init__(self, input_size, hidden_size1, hidden_size2, hidden_size3, output_size):
+        super(NN_model, self).__init__()
+        self.input = torch.nn.Linear(input_size, hidden_size1)
+        self.hidden1 = torch.nn.Linear(hidden_size1, hidden_size2)
+        self.hidden2 = torch.nn.Linear(hidden_size2, hidden_size3)
+        self.hidden3 = torch.nn.Linear(hidden_size3, hidden_size4)
+        self.output = torch.nn.Linear(hidden_size3, output_size)
+        
+    def forward(self, x):
+        x = self.input(x)
+        x = torch.sigmoid(x)
+        x = self.hidden1(x)
+        x = torch.sigmoid(x)
+        x = self.hidden2(x)
+        x = torch.sigmoid(x)
+        x = self.hidden3(x)
+        x = torch.sigmoid(self.output(x))
+        return x
     
 
 if __name__ == '__main__':
