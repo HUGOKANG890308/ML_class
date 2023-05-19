@@ -282,7 +282,7 @@ def feature_selection(X, y, method='raw', model=SVC(kernel='rbf', C=10 ),  n_fea
     
     return X_new, y
 
-def imblance_data(X_train, y_train, sample_no, random_state = our_random_state):
+def imblance_data(X_train, y_train, sample_no, random_state = random_state):
     '''
     X_train: input training data ; type: pandas dataframe
     y_train: input training label ; type: pandas dataframe
@@ -339,10 +339,6 @@ def evaluation(y_test, y_pred):
     f_beta = round(fbeta_score(y_test, y_pred, beta=3),4)
     
     return ac, f1, pre, rec, auc, f_beta
-<<<<<<< HEAD
-
-=======
->>>>>>> a0928bc204b78f6888c18cad203224ec5bafe471
 def basic_ml(using_model , X_train, y_train, X_test, y_test ):
     '''
     to return evaluate dataframe
