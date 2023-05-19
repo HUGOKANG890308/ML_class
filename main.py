@@ -32,7 +32,7 @@ for j in imblance_way:
                                     'SVM':SVC(random_state=Random_state)},
                          x_train=X_train,y_train=y_train,x_test=x_test,y_test=y_test)
             if l==1:
-                basic_ml(using_model2={'xgb': XGBClassifier(**study(method='xgb', n_trials=n_trials)),'rf':RandomForestClassifier(**study(method='rf', n_trials=n_trials))
-                                    ,'SVM':SVC(**study(method='SVM', n_trials=n_trials))},
+                basic_ml(using_model={'xgb': XGBClassifier(**study(method='xgb', n_trials=n_trials)),'rf':RandomForestClassifier(**study(method='rf', n_trials=n_trials))
+                                    ,'svm':SVC(**study(method='svm', n_trials=n_trials))},
                          x_train=X_train,y_train=y_train,x_test=x_test,y_test=y_test)
-            
+              

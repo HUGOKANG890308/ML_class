@@ -21,23 +21,8 @@ from mlxtend.feature_selection import SequentialFeatureSelector as SFS
 from mlxtend.feature_selection import ExhaustiveFeatureSelector as EFS
 from sklearn.ensemble import ExtraTreesClassifier
 import torch
+our_random_state=0
 
-df = pd.read_csv('data.csv')
-X = df.drop(['Bankrupt?'], axis = 1)
-Y = df['Bankrupt?']
-print(f'X is {X}, X.shape is {X.shape}\n\n')
-print(f'Y is {Y}, Y.shape is {Y.shape}\n\n')
-#parameters of def splitting_train_validation_StratifiedKFold
-our_random_state = 0
-our_shuffle = False
-n=5
-Test_size,Validation_size = 0.2,0.2
-Random_state = 0
-X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size = Test_size, 
-                                                    random_state = Random_state)
-X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, 
-                                                                test_size = Validation_size, 
-                                                                 random_state = Random_state)
 
 #x_train, x_test, y_train, y_test = train_test_split(X, Y, test_size = our_test_size, random_state = our_random_state)
 #x_train, x_validation, y_train, y_validation = train_test_split(x_train, y_train, test_size = our_validation_size, random_state = our_random_state)
@@ -379,8 +364,8 @@ def basic_ml(using_model , X_train, y_train, X_test, y_test ):
 df = basic_ml(using_model={'xgb': XGBClassifier(), 'rf': RandomForestClassifier(
 )}, X_train, y_train, X_test, y_test)
 '''
-
-def objective(trial, method):
+    
+def objective(trial, method, X_train, y_train, X_val, y_val):
     '''
     method: input using model; type: string
     clf: input using model; type: sklearn model
@@ -390,7 +375,7 @@ def objective(trial, method):
         kernel = trial.suggest_categorical(
             'kernel', ['linear', 'poly', 'rbf', 'sigmoid'])
         degree = trial.suggest_int('degree', 2, 5)
-        clf=SVC(C=C, kernel=kernel, degree=degree)
+        clf=SVC(C=C, kernel=kernel, degree=degree,random_state=our_random_state)
 
     elif method == 'rf':
         max_depth = trial.suggest_int("max_depth", 2, 128)
@@ -399,7 +384,7 @@ def objective(trial, method):
         min_samples_leaf = int(trial.suggest_int('min_samples_leaf', 2, 128))
         criterion = trial.suggest_categorical("criterion", ["gini", "entropy"])
         clf=RandomForestClassifier(min_samples_split=min_samples_split,
-                max_leaf_nodes=max_leaf_nodes, criterion=criterion, random_state=Random_state, max_depth=max_depth,
+                max_leaf_nodes=max_leaf_nodes, criterion=criterion, random_state=our_random_state, max_depth=max_depth,
                 min_samples_leaf=min_samples_leaf)
     elif method == 'xgb':
         max_depth = trial.suggest_int("max_depth", 2, 128)
@@ -410,7 +395,8 @@ def objective(trial, method):
             'colsample_bytree', 0.5, 1, 0.1)
         learning_rate = trial.suggest_loguniform('learning_rate', 1e-5, 1e-2)
         clf=XGBClassifier(max_depth=max_depth, min_child_weight=min_child_weight, gamma=gamma, subsample=subsample,
-                colsample_bytree=colsample_bytree, learning_rate=learning_rate)
+                colsample_bytree=colsample_bytree, learning_rate=learning_rate,
+                random_state=our_random_state, tree_method='gpu_hist' if torch.cuda.is_available() else 'auto')
     else:
         raise ValueError(f"Invalid method '{method}'")
     clf.fit(X_train, y_train)
