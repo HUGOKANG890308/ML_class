@@ -20,12 +20,24 @@ from statsmodels.stats.outliers_influence import variance_inflation_factor
 from mlxtend.feature_selection import SequentialFeatureSelector as SFS
 from mlxtend.feature_selection import ExhaustiveFeatureSelector as EFS
 from sklearn.ensemble import ExtraTreesClassifier
+import torch
 
 df = pd.read_csv('data.csv')
 X = df.drop(['Bankrupt?'], axis = 1)
 Y = df['Bankrupt?']
 print(f'X is {X}, X.shape is {X.shape}\n\n')
 print(f'Y is {Y}, Y.shape is {Y.shape}\n\n')
+#parameters of def splitting_train_validation_StratifiedKFold
+our_random_state = 0
+our_shuffle = False
+n=5
+Test_size,Validation_size = 0.2,0.2
+Random_state = 0
+X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size = Test_size, 
+                                                    random_state = Random_state)
+X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, 
+                                                                test_size = Validation_size, 
+                                                                 random_state = Random_state)
 
 #x_train, x_test, y_train, y_test = train_test_split(X, Y, test_size = our_test_size, random_state = our_random_state)
 #x_train, x_validation, y_train, y_validation = train_test_split(x_train, y_train, test_size = our_validation_size, random_state = our_random_state)
@@ -51,10 +63,10 @@ def splitting_train_validation_StratifiedKFold(X, Y, n, our_random_state = None,
         y_train = training data of y ; type = pandas dataframe
         y_validation = validation data of y ; type = pandas dataframe
     '''   
+   
+    StratifiedKFold_result = StratifiedKFold(n_splits = n, random_state = our_random_state, shuffle = our_shuffle)
     
-   StratifiedKFold_result = StratifiedKFold(n_splits = n, random_state = our_random_state, shuffle = our_shuffle)
-    
-   for train_index, validate_index in StratifiedKFold_result.split(X, Y):
+    for train_index, validate_index in StratifiedKFold_result.split(X, Y):
        print("Train index:", train_index, "Test index:", validate_index)
        x_train_raw, x_validation_raw = X.iloc[train_index], X.iloc[validate_index]
        y_train_raw, y_validation_raw = Y.iloc[train_index], Y.iloc[validate_index]
@@ -280,7 +292,7 @@ def feature_selection(X, y, method='raw', model=SVC(kernel='rbf', C=10 ),  n_fea
     
     return X_new, y
 
-def imblance_data(X_train, y_train, sample_no, random_state = random_state):
+def imblance_data(X_train, y_train, sample_no, random_state = our_random_state):
     '''
     X_train: input training data ; type: pandas dataframe
     y_train: input training label ; type: pandas dataframe
@@ -338,7 +350,7 @@ def evaluation(y_test, y_pred):
     
     return ac, f1, pre, rec, auc, f_beta
 
-def basic_ml(using_model = dict, X_train, y_train, X_test, y_test ):
+def basic_ml(using_model , X_train, y_train, X_test, y_test ):
     '''
     to return evaluate dataframe
     
@@ -368,7 +380,7 @@ df = basic_ml(using_model={'xgb': XGBClassifier(), 'rf': RandomForestClassifier(
 )}, X_train, y_train, X_test, y_test)
 '''
 
-def objective(trial, method, clf):
+def objective(trial, method):
     '''
     method: input using model; type: string
     clf: input using model; type: sklearn model
@@ -378,6 +390,7 @@ def objective(trial, method, clf):
         kernel = trial.suggest_categorical(
             'kernel', ['linear', 'poly', 'rbf', 'sigmoid'])
         degree = trial.suggest_int('degree', 2, 5)
+        clf=SVC(C=C, kernel=kernel, degree=degree)
 
     elif method == 'rf':
         max_depth = trial.suggest_int("max_depth", 2, 128)
@@ -385,7 +398,9 @@ def objective(trial, method, clf):
         max_leaf_nodes = int(trial.suggest_int("max_leaf_nodes", 2, 128))
         min_samples_leaf = int(trial.suggest_int('min_samples_leaf', 2, 128))
         criterion = trial.suggest_categorical("criterion", ["gini", "entropy"])
-        
+        clf=RandomForestClassifier(min_samples_split=min_samples_split,
+                max_leaf_nodes=max_leaf_nodes, criterion=criterion, random_state=Random_state, max_depth=max_depth,
+                min_samples_leaf=min_samples_leaf)
     elif method == 'xgb':
         max_depth = trial.suggest_int("max_depth", 2, 128)
         min_child_weight = trial.suggest_int("min_child_weight", 2, 128)
@@ -394,7 +409,8 @@ def objective(trial, method, clf):
         colsample_bytree = trial.suggest_discrete_uniform(
             'colsample_bytree', 0.5, 1, 0.1)
         learning_rate = trial.suggest_loguniform('learning_rate', 1e-5, 1e-2)
-
+        clf=XGBClassifier(max_depth=max_depth, min_child_weight=min_child_weight, gamma=gamma, subsample=subsample,
+                colsample_bytree=colsample_bytree, learning_rate=learning_rate)
     else:
         raise ValueError(f"Invalid method '{method}'")
     clf.fit(X_train, y_train)
@@ -410,20 +426,16 @@ def study(method='svm', n_trials=10):
     method : input using model; type: string, default: 'xgb'
     n_trials : input number of trials; type: int
     '''
-    clf = {'svm': SVC(C=C, kernel=kernel, degree=degree), 'rf': RandomForestClassifier(min_samples_split=min_samples_split,
-                max_leaf_nodes=max_leaf_nodes, criterion=criterion, random_state=4, max_depth=max_depth,
-                  min_samples_leaf=min_samples_leaf)
-                , 'xgb': XGBClassifier(max_depth=max_depth, min_child_weight=min_child_weight, gamma=gamma, subsample=subsample,
-                colsample_bytree=colsample_bytree, learning_rate=learning_rate)}
     study = optuna.create_study()
-    study.optimize(lambda trial: objective(trial, method, clf[method]), n_trials=n_trials)
+    study.optimize(lambda trial: objective(trial, method), n_trials=n_trials)
     '''
     output: best params of model type: dictionary
     '''
     return study.best_params
+
 '''
 example of using study
-basic_ml(using_model={'xgb': XGBClassifier(**study(method='rf', n_trials=10)),'xgb1':XGBClassifier()},
+basic_ml(using_model={'xgb': XGBClassifier(**study(method='xgb', n_trials=10)),'xgb1':XGBClassifier()},
  X_train=pd.concat([X_train, X_val], axis=0), y_train=pd.concat([y_train, y_val], axis=0), 
  X_test=X_test, y_test=y_test)
 
