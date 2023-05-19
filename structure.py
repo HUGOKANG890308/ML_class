@@ -432,12 +432,10 @@ def study(method='svm', n_trials=10):
     output: best params of model type: dictionary
     '''
     return study.best_params
-basic_ml(using_model={'xgb': XGBClassifier(**study(method='xgb', n_trials=10)),'xgb1':XGBClassifier()},
- X_train=pd.concat([X_train, X_val], axis=0), y_train=pd.concat([y_train, y_val], axis=0), 
- X_test=X_test, y_test=y_test)
+
 '''
 example of using study
-basic_ml(using_model={'xgb': XGBClassifier(**study(method='rf', n_trials=10)),'xgb1':XGBClassifier()},
+basic_ml(using_model={'xgb': XGBClassifier(**study(method='xgb', n_trials=10)),'xgb1':XGBClassifier()},
  X_train=pd.concat([X_train, X_val], axis=0), y_train=pd.concat([y_train, y_val], axis=0), 
  X_test=X_test, y_test=y_test)
 
