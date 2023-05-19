@@ -5,7 +5,7 @@
     line 21~25: 讓 for 迴圈跑的 list，line 25應該是 dict(用在 basic_ml)，但是不確定該怎麼寫
     line 46: 有兩個 split train & valid 的方法，但當初講迴圈的時候後沒有提到，不確定是否該用迴圈寫這部分
     line 82: 不清楚 x_train 和 y_train 的輸入應該怎麼處理
-    line 88: 存成csv檔，但目前每一項都會存成一樣的檔名
+    line 88: 存成csv檔，但目前每一項都會存成一樣的檔名，且沒有存到 object
 '''
 
 import structure.py as s
