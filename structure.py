@@ -21,6 +21,7 @@ from mlxtend.feature_selection import SequentialFeatureSelector as SFS
 from mlxtend.feature_selection import ExhaustiveFeatureSelector as EFS
 from sklearn.ensemble import ExtraTreesClassifier
 import torch
+<<<<<<< HEAD
 random_state=0
 '''
 our_test_size, our_validation_size = 0.2,0.2
@@ -29,6 +30,25 @@ X = df.drop(['Bankrupt?'], axis = 1)
 Y = df['Bankrupt?']
 X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size = our_test_size, random_state = random_state)
 X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size = our_validation_size, random_state = random_state)
+=======
+
+df = pd.read_csv('data.csv')
+X = df.drop(['Bankrupt?'], axis = 1)
+Y = df['Bankrupt?']
+print(f'X is {X}, X.shape is {X.shape}\n\n')
+print(f'Y is {Y}, Y.shape is {Y.shape}\n\n')
+#parameters of def splitting_train_validation_StratifiedKFold
+our_random_state = 0
+our_shuffle = False
+n=5
+Test_size,Validation_size = 0.2,0.2
+Random_state = 0
+X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size = Test_size, 
+                                                    random_state = Random_state)
+X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, 
+                                                                test_size = Validation_size, 
+                                                                 random_state = Random_state)
+>>>>>>> a0928bc204b78f6888c18cad203224ec5bafe471
 
 '''
 
@@ -53,9 +73,14 @@ def splitting_train_validation_StratifiedKFold(X, Y, n, our_random_state = None,
         y_train = training data of y ; type = pandas dataframe
         y_validation = validation data of y ; type = pandas dataframe
     '''   
+   
+    StratifiedKFold_result = StratifiedKFold(n_splits = n, random_state = our_random_state, shuffle = our_shuffle)
     
+<<<<<<< HEAD
     StratifiedKFold_result = StratifiedKFold(n_splits = n, random_state = random_state, shuffle = our_shuffle)
     
+=======
+>>>>>>> a0928bc204b78f6888c18cad203224ec5bafe471
     for train_index, validate_index in StratifiedKFold_result.split(X, Y):
        print("Train index:", train_index, "Test index:", validate_index)
        x_train_raw, x_validation_raw = X.iloc[train_index], X.iloc[validate_index]
@@ -282,7 +307,7 @@ def feature_selection(X, y, method='raw', model=SVC(kernel='rbf', C=10 ),  n_fea
     
     return X_new, y
 
-def imblance_data(X_train, y_train, sample_no, random_state = random_state):
+def imblance_data(X_train, y_train, sample_no, random_state = our_random_state):
     '''
     X_train: input training data ; type: pandas dataframe
     y_train: input training label ; type: pandas dataframe
@@ -339,7 +364,10 @@ def evaluation(y_test, y_pred):
     f_beta = round(fbeta_score(y_test, y_pred, beta=3),4)
     
     return ac, f1, pre, rec, auc, f_beta
+<<<<<<< HEAD
 
+=======
+>>>>>>> a0928bc204b78f6888c18cad203224ec5bafe471
 def basic_ml(using_model , X_train, y_train, X_test, y_test ):
     '''
     to return evaluate dataframe
@@ -381,7 +409,11 @@ def objective(trial, method, X_train, y_train, X_val, y_val):
         kernel = trial.suggest_categorical(
             'kernel', ['linear', 'poly', 'rbf', 'sigmoid'])
         degree = trial.suggest_int('degree', 2, 5)
+<<<<<<< HEAD
         clf=SVC(C=C, kernel=kernel, degree=degree,random_state=random_state)
+=======
+        clf=SVC(C=C, kernel=kernel, degree=degree,random_state=our_random_state)
+>>>>>>> a0928bc204b78f6888c18cad203224ec5bafe471
 
     elif method == 'rf':
         max_depth = trial.suggest_int("max_depth", 2, 128)
@@ -444,6 +476,18 @@ basic_ml(using_model={'xgb': XGBClassifier(**study(method='xgb', n_trials=5 ,X_t
  X_train=pd.concat([X_train, X_val], axis=0), y_train=pd.concat([y_train, y_val], axis=0), 
  X_test=X_test, y_test=y_test)
 '''
+example of using study
+basic_ml(using_model={'xgb': XGBClassifier(**study(method='xgb', n_trials=10 ,X_train=X_train, y_train=y_train, X_val=X_val, y_val=y_val)), 
+                      'xgb1':XGBClassifier(random_state=our_random_state),
+                      'rf': RandomForestClassifier(**study(method='rf', n_trials=10 ,X_train=X_train, y_train=y_train, X_val=X_val, y_val=y_val)),
+                      'rf1':RandomForestClassifier(random_state=our_random_state),
+                      'svm': SVC(**study(method='svm', n_trials=10 ,X_train=X_train, y_train=y_train, X_val=X_val, y_val=y_val)),
+                      'svm1':SVC(random_state=our_random_state),
+                      },
+ X_train=pd.concat([X_train, X_val], axis=0), y_train=pd.concat([y_train, y_val], axis=0), 
+ X_test=X_test, y_test=y_test)
+'''
+
 def objective_nn(trial):
     
     '''
