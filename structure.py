@@ -22,10 +22,15 @@ from mlxtend.feature_selection import ExhaustiveFeatureSelector as EFS
 from sklearn.ensemble import ExtraTreesClassifier
 import torch
 our_random_state=0
+our_test_size,our_validation_size=0.2,0.2
+df = pd.read_csv('data.csv')
+X = df.drop(['Bankrupt?'], axis = 1)
+Y = df['Bankrupt?']
+print(f'X is {X}, X.shape is {X.shape}\n\n')
+print(f'Y is {Y}, Y.shape is {Y.shape}\n\n')
 
-
-#x_train, x_test, y_train, y_test = train_test_split(X, Y, test_size = our_test_size, random_state = our_random_state)
-#x_train, x_validation, y_train, y_validation = train_test_split(x_train, y_train, test_size = our_validation_size, random_state = our_random_state)
+X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size = our_test_size, random_state = our_random_state)
+X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size = our_validation_size, random_state = our_random_state)
 
 def splitting_train_validation_StratifiedKFold(X, Y, n, our_random_state = None, our_shuffle = False):
     '''
@@ -368,6 +373,7 @@ df = basic_ml(using_model={'xgb': XGBClassifier(), 'rf': RandomForestClassifier(
 def objective(trial, method, X_train, y_train, X_val, y_val):
     '''
     method: input using model; type: string
+         can be one of the following: 'svm', 'rf', 'xgb'
     clf: input using model; type: sklearn model
     '''
     if method == 'svm':
@@ -396,7 +402,7 @@ def objective(trial, method, X_train, y_train, X_val, y_val):
         learning_rate = trial.suggest_loguniform('learning_rate', 1e-5, 1e-2)
         clf=XGBClassifier(max_depth=max_depth, min_child_weight=min_child_weight, gamma=gamma, subsample=subsample,
                 colsample_bytree=colsample_bytree, learning_rate=learning_rate,
-                random_state=our_random_state, tree_method='gpu_hist' if torch.cuda.is_available() else 'auto')
+                random_state=our_random_state)#, tree_method='gpu_hist' if torch.cuda.is_available() else 'auto')
     else:
         raise ValueError(f"Invalid method '{method}'")
     clf.fit(X_train, y_train)
@@ -407,24 +413,37 @@ def objective(trial, method, X_train, y_train, X_val, y_val):
     '''
     return scores
 
-def study(method='svm', n_trials=10):
+def study(method, n_trials,X_train, y_train, X_val, y_val):
     '''
-    method : input using model; type: string, default: 'xgb'
+    method : input using model; type: string, 
+        can be one of the following: 'svm', 'rf', 'xgb'
     n_trials : input number of trials; type: int
+    X_train: input training data ; type: pandas dataframe
+    y_train: input training label ; type: pandas dataframe
+    X_val: input validation data ; type: pandas dataframe
+    y_val: input validation label ; type: pandas dataframe
+    
     '''
-    study = optuna.create_study()
-    study.optimize(lambda trial: objective(trial, method), n_trials=n_trials)
+    study = optuna.create_study(direction='maximize')
+    study.optimize(lambda trial: objective(trial, method,X_train, y_train, X_val, y_val), n_trials=n_trials)
     '''
     output: best params of model type: dictionary
     '''
     return study.best_params
 
+
+
 '''
 example of using study
-basic_ml(using_model={'xgb': XGBClassifier(**study(method='xgb', n_trials=10)),'xgb1':XGBClassifier()},
+basic_ml(using_model={'xgb': XGBClassifier(**study(method='xgb', n_trials=10 ,X_train=X_train, y_train=y_train, X_val=X_val, y_val=y_val)), 
+                      'xgb1':XGBClassifier(random_state=our_random_state),
+                      'rf': RandomForestClassifier(**study(method='rf', n_trials=10 ,X_train=X_train, y_train=y_train, X_val=X_val, y_val=y_val)),
+                      'rf1':RandomForestClassifier(random_state=our_random_state),
+                      'svm': SVC(**study(method='svm', n_trials=10 ,X_train=X_train, y_train=y_train, X_val=X_val, y_val=y_val)),
+                      'svm1':SVC(random_state=our_random_state),
+                      },
  X_train=pd.concat([X_train, X_val], axis=0), y_train=pd.concat([y_train, y_val], axis=0), 
  X_test=X_test, y_test=y_test)
-
 '''
 def objective_nn(trial):
     
