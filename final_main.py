@@ -77,6 +77,8 @@ for fs_method_name, fs_method in s.tqdm(feature_selection_mtehod.items()):
         imb_df = s.pd.concat([imb_df, ml_df])
     
     imb_df = imb_df.reset_index(drop=True)
+    
+    
     imb_df.insert(0, 'feature_selection_method', fs_method_name)
     final_df = s.pd.concat([final_df, imb_df])
 
