@@ -82,24 +82,3 @@ for fs_method_name, fs_method in s.tqdm(feature_selection_mtehod.items()):
 
 final_df = final_df.reset_index(drop=True)
 final_df.to_csv('final_result.csv')
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        
-        
