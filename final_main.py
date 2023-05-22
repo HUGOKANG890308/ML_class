@@ -9,10 +9,8 @@ import structure as s
 # some config
 random_state = 0
 test_size = 0.2
-k_fold_num = 10
 fs_model = s.SVC(kernel='rbf', C=10 )
 fs_feature_num = 30
-n_trials = 10
 
 feature_selection_mtehod = {'VIF': 'variance_inflation_factor', 
                             'VIF + SFS': 'Sequential Feature Selection', 
@@ -36,7 +34,7 @@ Y = df['Bankrupt?']
 X_train, x_test, Y_train, y_test = s.train_test_split(X, Y, test_size = test_size, random_state = random_state)
 
 # k_fold loop
-final = list()
+cv_score = list()
 sskf = s.StratifiedKFold(n_splits=k_fold_num, shuffle=True, random_state=random_state)
 for train_index, val_index in s.tqdm(sskf.split(X_train, Y_train)):
     print("Train index:", train_index, "Test index:", val_index)
@@ -48,6 +46,8 @@ for train_index, val_index in s.tqdm(sskf.split(X_train, Y_train)):
     x_train = s.pd.DataFrame(x_train, columns = X.columns)
     x_val = s.pd.DataFrame(x_val, columns = X.columns)
     x_test = s.pd.DataFrame(x_test, columns = X.columns)
+
+# x_train, x_val, x_test, y_train, y_val, y_test = prepare_X_Y()
 
     # feature selection
     fs_df = s.pd.DataFrame()
@@ -67,9 +67,9 @@ for train_index, val_index in s.tqdm(sskf.split(X_train, Y_train)):
             models={'xgb_tuned': s.XGBClassifier(**s.study(method='xgb', n_trials = n_trials, X_train=x_train_select, y_train=y_train_select, X_val=x_val_select, y_val=y_val)), 
                     'xgb':s.XGBClassifier(random_state = random_state),
                     'rf_tuned': s.RandomForestClassifier(**s.study(method='rf', n_trials = n_trials, X_train=x_train_select, y_train=y_train_select, X_val=x_val_select, y_val=y_val)),
-                    'rf':s.RandomForestClassifier(random_state = random_state)
-                    # 'svm_tuned': s.SVC(**s.study(method='svm', n_trials = n_trials, X_train=x_train_select, y_train=y_train_select, X_val=x_val_select, y_val=y_val)),
-                    # 'svm':s.SVC(random_state = random_state)
+                    'rf':s.RandomForestClassifier(random_state = random_state),
+                    'svm_tuned': s.SVC(**s.study(method='svm', n_trials = n_trials, X_train=x_train_select, y_train=y_train_select, X_val=x_val_select, y_val=y_val)),
+                    'svm':s.SVC(random_state = random_state)
                     }
             
             ml_df = s.basic_ml(models, x_train_select, y_train_select, x_test_select, y_test )
@@ -81,9 +81,8 @@ for train_index, val_index in s.tqdm(sskf.split(X_train, Y_train)):
         fs_df = s.pd.concat([fs_df, imb_df])
         
     fs_df = fs_df.reset_index(drop=True)
-    final.append(fs_df.iloc[:, 3:].values)
+    cv_score.append(fs_df.iloc[:, 3:].values)
 
 final_df = fs_df.copy()
-final_df.iloc[:, 3:] = s.np.mean(final, axis = 0)
+final_df.iloc[:, 3:] = s.np.mean(cv_score, axis = 0)
 final_df.to_csv('final_result.csv')
-
