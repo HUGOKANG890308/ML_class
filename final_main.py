@@ -49,8 +49,6 @@ for train_index, val_index in s.tqdm(sskf.split(X_train, Y_train)):
     x_val = s.pd.DataFrame(x_val, columns = X.columns)
     x_test = s.pd.DataFrame(x_test, columns = X.columns)
 
-# x_train, x_val, x_test, y_train, y_val, y_test = prepare_X_Y()
-
     # feature selection
     fs_df = s.pd.DataFrame()
     for fs_method_name, fs_method in feature_selection_mtehod.items():
