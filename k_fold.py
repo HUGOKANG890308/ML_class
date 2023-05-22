@@ -19,6 +19,7 @@ cv=StratifiedKFold(n_splits=10,random_state=1,shuffle=True)
 # evaluate model
 #tuple of arrays in the following order: (train,test)
 scores=list()
+smote=SMOTE()
 for train_ix,test_ix in cv.split(X,y):
     # split dataset
     X_train,X_test=X[train_ix,:],X[test_ix,:]
@@ -26,7 +27,6 @@ for train_ix,test_ix in cv.split(X,y):
     print('*'*10+'before smote'+10*'*')
     print(np.unique(y_train, return_counts=True))
     # oversample minority class
-    smote=SMOTE()
     X_train,y_train=smote.fit_resample(X_train,y_train)
     print(X_train.shape,y_train.shape)
     print('*'*10+'after smote'+10*'*')
