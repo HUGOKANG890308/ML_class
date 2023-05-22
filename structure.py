@@ -107,7 +107,7 @@ def standardize(x_training_data, x_validation_data, x_testing_data, method):
     return x_training_data, x_validation_data, x_testing_data
     
    
-def feature_selection(X, y, method='raw', model=SVC(kernel='rbf', C=10 ),  n_feature=30 , random_state=random_state):
+def feature_selection(X, y, method='raw', model=SVC(kernel='rbf', C=10 ),  n_feature=30 , random_state=our_random_state):
     '''
     Input:
     X: input raw data include all feature; type: pandas dataframe
@@ -364,7 +364,8 @@ df = basic_ml(using_model={'xgb': XGBClassifier(), 'rf': RandomForestClassifier(
 )}, X_train, y_train, X_test, y_test)
 '''
 
-def objective(trial, method):
+    
+def objective(trial, method, X_train, y_train, X_val, y_val):
     '''
     method: input using model; type: string
          can be one of the following: 'svm', 'rf', 'xgb'
@@ -416,6 +417,7 @@ def study(method, n_trials,X_train, y_train, X_val, y_val):
     y_train: input training label ; type: pandas dataframe
     X_val: input validation data ; type: pandas dataframe
     y_val: input validation label ; type: pandas dataframe
+    
     '''
     study = optuna.create_study(direction='maximize')
     study.optimize(lambda trial: objective(trial, method,X_train, y_train, X_val, y_val), n_trials=n_trials)
