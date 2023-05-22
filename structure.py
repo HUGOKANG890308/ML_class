@@ -20,8 +20,12 @@ from statsmodels.stats.outliers_influence import variance_inflation_factor
 from mlxtend.feature_selection import SequentialFeatureSelector as SFS
 from mlxtend.feature_selection import ExhaustiveFeatureSelector as EFS
 from sklearn.ensemble import ExtraTreesClassifier
-import torch
 from tqdm import tqdm
+
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torch.utils.data import DataLoader, TensorDataset
 
 our_random_state = 0
 
@@ -448,75 +452,222 @@ basic_ml(using_model={'xgb': XGBClassifier(**study(method='xgb', n_trials=10 ,X_
  X_test=X_test, y_test=y_test)
 
 '''
-def objective_nn(trial):
-    
+
+'''
+Deeplearning model
+使用方法 : 
+Step1 : 先將X_train, y_train, X_valid, y_valid, X_test, y_test, 帶入Function "convert_to_DataLoader"
+        返還 (train_loader, valid_loader, test_loader)
+Step2 : 將train_loader, valid_loader, test_loader帶入Training_nn進行超參數的調教
+        返還 Function "evaluation" 中的所有metric
+'''
+class nn_model(nn.Module):
     '''
-    optuna for deep learning model
-    使用前請先將train validation test set 轉換為pytorch dataloader
+    此為deep learning model 
+    可調教的參數有 n_layers, hidden_sizes, learning_rate
     '''
-    # Define the hyperparameter search space
-    hidden_size1 = trial.suggest_int('hidden_size1', 2, 64)
-    hidden_size2 = trial.suggest_int('hidden_size2', 2, 64)
-    hidden_size3 = trial.suggest_int('hidden_size3', 2, 64)
-    hidden_size4 = trial.suggest_int('hidden_size4', 2, 64)
-    learning_rate = trial.suggest_loguniform('learning_rate', 0.01, 0.5)
+    def __init__(self, input_size, hidden_sizes, output_size):
+        super(nn_model, self).__init__()
+        self.layers = nn.ModuleList()
+        prev_size = input_size
+        for hidden_size in hidden_sizes:
+            self.layers.append(nn.Linear(prev_size, hidden_size))
+            self.layers.append(nn.Sigmoid())
+            prev_size = hidden_size
+        self.output_layer = nn.Linear(prev_size, output_size)
+
+    def forward(self, x):
+        for layer in self.layers:
+            x = layer(x)
+        x = self.output_layer(x)
+        x = torch.sigmoid(x)
+        return x
+
     
-    # Create a new instance of the model with the suggested hyperparameters
-    model = NN_model(input_size, hidden_size1, hidden_size2, hidden_size3,  output_size)
+def convert_to_DataLoader(X_train, y_train, X_valid, y_valid, X_test, y_test, batch_size):
+    '''
+    這個function用來將training validation, testing data 轉換為 Pytorch DataLoader
+    input:
+        X_train, y_train, X_valid, y_valid, X_test, y_test : 
+            這些data 必須經過imbalance data的處理以及標準化
+        batch_size : 
+            用來決定DataLoader 一次迭帶多少筆data
+    output:
+        train_loader, valid_loader, test_loader :
+            Pytorch DataLoader
+    '''
+    shuffle = False
+    batch_size = batch_size
+    # Convert data to pytorch DataLoader 
+    X_train = torch.tensor(X_train, dtype=torch.float32)
+    X_valid = torch.tensor(X_valid, dtype=torch.float32)
+    X_test = torch.tensor(X_test, dtype=torch.float32)
+    y_train = torch.tensor(y_train, dtype=torch.float32)
+    y_valid = torch.tensor(y_valid, dtype=torch.float32)
+    y_test = torch.tensor(y_test, dtype=torch.float32)
     
-    # Define the loss function and optimizer
-    criterion = torch.nn.BCELoss()
+    
+    #Create train dataloader
+    train_dataset = TensorDataset(X_train, y_train)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle)
+
+    #Create validation dataloader
+    valid_dataset = TensorDataset(X_valid, y_valid)
+    valid_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=shuffle)
+
+    #Create train dataloader
+    test_dataset = TensorDataset(X_test, y_test)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=shuffle) 
+    
+    return train_loader, valid_loader, test_loader
+
+def objective_nn(trial, train_loader, valid_loader):
+    '''
+    optuna_object for nn_model, hyperparameter(n_layers, hidden_sizes, learning_rate)
+
+    input : train_loader, valid_loader :
+            
+    output : our main metric
+    '''
+    # 定義參數
+    input_size = 95
+    n_epochs = 20
+    output_size = 1
+    print("*"*50)
+    hidden_sizes = []
+    n_layers = trial.suggest_int("n_layers", 1, 5)  # Suggest the number of layers to be tuned
+    for i in range(n_layers):
+        hidden_sizes.append(trial.suggest_int(f"hidden_size_{i}", 2, 64))  # Suggest the size of each hidden layer
+    learning_rate = trial.suggest_loguniform('learning_rate', 1e-5, 1e-1)
+    
+    
+    model = nn_model(input_size, hidden_sizes, output_size)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-    
-    # Training loop
+    criterion = nn.CrossEntropyLoss()
+
     model.train()
-    for epoch in range(num_epochs):
-        for X_train, y_train in train_loader:
-            optimizer.zero_grad()  
-            outputs = model(X_train)
-            loss = criterion(outputs, y_train.unsqueeze(1))
+    for epoch in range(n_epochs):
+        for inputs, labels in train_loader:
+            outputs = model(inputs)
+            loss = criterion(outputs, labels.unsqueeze(1))
             loss.backward()
             optimizer.step()
-    
-    # Evaluation on the validation set
+            optimizer.zero_grad()
     model.eval()
+    
     predictions = []
     y_valids = []
+    score = None
     with torch.no_grad():
         for x_valid, y_valid in valid_loader:
             outputs = model(x_valid)
             predictions.extend(outputs.round().squeeze().tolist())
             y_valids.extend(y_valid.round().squeeze().tolist())
     # Calculate F1 score
-    score = fbeta_score(y_valids, predictions)
-    
+    score = fbeta_score(y_valids, predictions, beta=3) 
+    #score = accuracy_score(y_valids, predictions)
     return score
 
-class NN_model(torch.nn.Module):
+def Training_nn(train_loader, valid_loader, test_loader, input_size, n_epochs, batch_size, n_trials):
     '''
-    deep learning model
-    使用前請自訂超參數
-    num_epochs, batch_size, input_size, hidden_size, output_size 
+    這個Function用來訓練及調教nn_model中的超參數
+    input :
+        train_loader, valid_loader, test_loader
+        input_size : number of feature after feature selection 
+        n_epochs : number od epoch
+        batch_size : number of data for every iteration
+        n_trials : number of trials for optuna
+    output :
+        Our evaluation metrics
+        ac, f1, pre, rec, auc, f_beta
     '''
+    # 定義引數
+    hidden_size = []
+    output_size = 1
+    learning_rate = None
     
-    def __init__(self, input_size, hidden_size1, hidden_size2, hidden_size3, output_size):
-        super(NN_model, self).__init__()
-        self.input = torch.nn.Linear(input_size, hidden_size1)
-        self.hidden1 = torch.nn.Linear(hidden_size1, hidden_size2)
-        self.hidden2 = torch.nn.Linear(hidden_size2, hidden_size3)
-        self.hidden3 = torch.nn.Linear(hidden_size3, hidden_size4)
-        self.output = torch.nn.Linear(hidden_size3, output_size)
+    n_trials = n_trials
+    batch_size = batch_size
+    n_epochs = n_epochs
+    shuffle = False
+    
+
+    
+    # Hyperparametor tuneing using optuna
+    
+    ## 設定 sampler
+    #alg=optuna.samplers.GridSampler(seed=42)   # Grid search
+    #alg=optuna.samplers.RandomSampler(seed=42) # Random search
+    alg=optuna.samplers.TPESampler(seed=42) # Tree-structured Parzen Estimator algorithm.   
+    #alg=optuna.samplers.CmaEsSampler(seed=42) # CMA-ES based algorithm
+    #alg=optuna.samplers.NSGAIISampler(seed=42)# Nondominated Sorting Genetic Algorithm II 
+    #alg=optuna.samplers.MOTPESampler(seed=42) # Multiobjective Tree-structured Parzen Estimator
+    #alg=optuna.samplers.QMCSampler(seed=42) # A Quasi Monte Carlo sampling algorithm
+    #alg=optuna.samplers.BruteForceSampler(seed=42) # Brute force algorithm.
+    #alg=optuna.samplers.intersection_search_space()# the intersection of parameter distributions that have been suggested in the completed trials of the study so far.
+    #alg=optuna.samplers.IntersectionSearchSpace()  # provides the same functionality of intersection_search_space with a much faster way
+    
+    
+    ## 設定 pruners (修剪方法)
+    # pruner=optuna.pruners.MedianPruner()     # Prune with median. For RandomSampler, MedianPruner
+    # pruner=optuna.pruners.NopPruner()        # No pruning
+    # pruner=optuna.pruners.PatientPruner()    # Prune with tolerance
+    # pruner=optuna.pruners.PercentilePruner() # Prune with specified percentile
+    # pruner=optuna.pruners.SuccessiveHalvingPruner() # Prune with Asynchronous Successive Halving algorithm
+    pruner=optuna.pruners.HyperbandPruner() # SuccessiveHalvingPruner的更激進版本, 並根據中間結果修剪試驗. For TPESampler, HyperbandPruner is the best.
+    # pruner=optuna.pruners.ThresholdPruner() # 當目標函數的值超過或是低於給定閾值時，該剪枝器停止試驗
+    
+    ## tuneing model 
+    study = optuna.create_study(sampler=alg, direction='maximize')
+    study.optimize(lambda trial: objective_nn(trial,  train_loader=train_loader, valid_loader=valid_loader), n_trials=n_trials)
+    best_params =  study.best_params
         
-    def forward(self, x):
-        x = self.input(x)
-        x = torch.sigmoid(x)
-        x = self.hidden1(x)
-        x = torch.sigmoid(x)
-        x = self.hidden2(x)
-        x = torch.sigmoid(x)
-        x = self.hidden3(x)
-        x = torch.sigmoid(self.output(x))
-        return x
+    # Retrain model
+    hidden_sizes = list(best_params.values())[1:-2]
+    n_layers = list(best_params.values())[0]
+    learning_rate = list(best_params.values())[-1]
+    best_model = nn_model(input_size, hidden_size, output_size)
+    best_optimizer = optim.Adam(best_model.parameters(), lr=learning_rate)  # Define the optimizer
+    criterion = torch.nn.BCELoss()
+    
+    best_model.train()
+    for epoch in range(n_epochs):
+        for X_train, y_train in train_loader:
+            best_optimizer.zero_grad()  # Use the best optimizer
+            outputs = best_model(X_train)
+            loss = criterion(outputs, y_train.unsqueeze(1))
+            loss.backward()
+            best_optimizer.step()
+            
+    # Evaluate the best model on the test set
+    best_model.eval()
+    predictions = []
+    y_tests = []
+    with torch.no_grad():
+        for X_test, y_test in test_loader:
+            outputs = best_model(X_test)
+            predictions.extend(outputs.round().squeeze().tolist())
+            y_tests.extend(y_test.round().squeeze().tolist())
+            
+    # Calculate F1 score on the test set
+    test_score = fbeta_score(y_tests, predictions, beta=3)
+    print("Best Fbata_score on the test set: {:.4f}".format(test_score))
+    
+    return evaluation(y_tests, predictions) 
+'''
+Deep Learning example
+# Difine parameter
+n_epochs = 10
+batch_size = 128
+n_trials = 100
+input_size = X_train.shape[1]
+random_state = 0
+shuffle = False
+
+train_loader, valid_loader, test_loader = convert_to_DataLoader(X_train, y_train, X_valid, y_valid, X_test, y_test, batch_size)
+ac, f1, pre, rec, auc, f_beta = Training_nn(train_loader, valid_loader, test_loader, input_size, n_epochs, batch_size, n_trials)
+
+'''
     
 
 if __name__ == '__main__':
