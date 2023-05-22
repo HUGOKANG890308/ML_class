@@ -9,10 +9,10 @@ import structure as s
 # some config
 random_state = 0
 test_size = 0.2
-k_fold_num = 2
+k_fold_num = 5
 fs_model = s.SVC(kernel='rbf', C=10 )
 fs_feature_num = 30
-n_trials = 1
+n_trials = 10
 
 feature_selection_mtehod = {'VIF': 'variance_inflation_factor', 
                             'VIF + SFS': 'Sequential Feature Selection', 
