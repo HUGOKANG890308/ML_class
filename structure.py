@@ -21,6 +21,7 @@ from mlxtend.feature_selection import SequentialFeatureSelector as SFS
 from mlxtend.feature_selection import ExhaustiveFeatureSelector as EFS
 from sklearn.ensemble import ExtraTreesClassifier
 import torch
+from tqdm import tqdm
 our_random_state=0
 our_test_size,our_validation_size=0.2,0.2
 df = pd.read_csv('data.csv')
