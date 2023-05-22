@@ -68,8 +68,8 @@ for train_index, val_index in s.tqdm(sskf.split(X_train, Y_train)):
                     'xgb':s.XGBClassifier(random_state = random_state),
                     'rf_tuned': s.RandomForestClassifier(**s.study(method='rf', n_trials = n_trials, X_train=x_train_select, y_train=y_train_select, X_val=x_val_select, y_val=y_val)),
                     'rf':s.RandomForestClassifier(random_state = random_state)
-                    # 'svm_tuned': s.SVC(**s.study(method='svm', n_trials = n_trials, X_train=x_train_select, y_train=y_train_select, X_val=x_val_select, y_val=y_val)),
-                    # 'svm':s.SVC(random_state = random_state)
+                    'svm_tuned': s.SVC(**s.study(method='svm', n_trials = n_trials, X_train=x_train_select, y_train=y_train_select, X_val=x_val_select, y_val=y_val)),
+                    'svm':s.SVC(random_state = random_state)
                     }
             
             ml_df = s.basic_ml(models, x_train_select, y_train_select, x_test_select, y_test )
