@@ -23,7 +23,7 @@ from sklearn.ensemble import ExtraTreesClassifier
 import torch
 from tqdm import tqdm
 
-
+our_random_state = 0
 
 def splitting_train_validation_StratifiedKFold(X, Y, n, our_random_state = None, our_shuffle = False):
     '''
