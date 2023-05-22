@@ -35,8 +35,12 @@ X_train, X_valid, y_train, y_valid = splitting_train_validation_StratifiedKFold(
 X_train, y_train = imblance_data(X_train, y_train, 3, random_state = random_state)
 
 
-X_train, X_valid, X_test = X_train.values, X_valid.values, X_test.values
-y_train, y_valid, y_test = y_train.values, y_valid.values, y_test.values
+X_train = np.array(X_train)
+X_valid = np.array(X_valid)
+X_test = np.array(X_test)
+y_train = np.array(y_train)
+y_valid = np.array(y_valid)
+y_test = np.array(y_test)
 
 input_size = X_train.shape[1]
 
