@@ -1,7 +1,7 @@
 '''
     所有 {}_train, {}_valid, {}_test 的 x,y 都是小寫開頭
     變數(Test_size, Valid_size.....)都是大寫開頭
-    line 77: 存成csv檔，但目前每一項都會存成一樣的檔名，且沒有存到 object
+    line 81: 存成csv檔，但目前每一項都會存成一樣的檔名，且沒有存到 object
 '''
 
 import structure as s
@@ -18,21 +18,6 @@ N_trials = 10
 method_standardize = 'min_max' # 有兩個 split train & valid 的方法: z_score_normalization / min_max
 list_feature_selection = ['variance_inflation_factor', 'Sequential Feature Selection', 'raw']
 list_oversample = ['1', '2', '3', '4', '5', '6']
-using_model = {'xgb_tuned': s.XGBClassifier(**s.study(method='xgb', n_trials=N_trials, 
-                                                      X_train=x_train, y_train=y_train, 
-                                                      X_val=x_valid, y_val=y_valid)),
-               'xgb': s.XGBClassifier(random_state=Random_state),
-               
-               'rf_tuned': s.RandomForestClassifier(**s.study(method='rf', n_trials=N_trials, 
-                                                              X_train=x_train, y_train=y_train, 
-                                                              X_val=x_valid, y_val=y_valid)),
-               'rf': s.RandomForestClassifier(random_state=Random_state),
-               
-               'svm_tuned': s.SVC(**s.study(method='svm', n_trials=N_trials, 
-                                            X_train=x_train, y_train=y_train, 
-                                            X_val=x_valid, y_val=y_valid)),
-               'svm': s.SVC(random_state=Random_state)
-               }
 
 
 # 讀檔
@@ -51,9 +36,8 @@ x_train, x_test, y_train, y_test = s.train_test_split(X, Y, test_size = Test_siz
 
 
 # split train & valid
-x_train, x_valid, y_train, y_valid = s.splitting_train_validation_StratifiedKFold(x_train, y_train,  
-                                                                                  N_split, Random_state,  
-                                                                                  Shuffle)
+x_train, x_valid, y_train, y_valid = s.train_test_split(X, Y, test_size = Test_size, 
+                                                        random_state = Random_state)
     
 # standardize train & test
 x_train, x_valid, x_test = s.standardize(x_train, x_valid, x_test, method_standardize)
@@ -80,6 +64,16 @@ for method_feature in list_feature_selection:
                 
                     
         # model training
+        
+        using_model = {'xgb_tuned': s.XGBClassifier(**s.study('xgb', N_trials, x_train, y_train, x_valid, y_valid)),
+                       'xgb': s.XGBClassifier(random_state=Random_state),
+                       
+                       'rf_tuned': s.RandomForestClassifier(**s.study('rf',N_trials, x_train, y_train, x_valid, y_valid)),
+                       'rf': s.RandomForestClassifier(random_state=Random_state),
+                       
+                       'svm_tuned': s.SVC(**s.study('svm', N_trials, x_train, y_train, x_valid, y_valid)),
+                       'svm': s.SVC(random_state=Random_state)
+                       }
         dataframe = s.basic_ml(using_model, x_train, y_train, x_test, y_test)
         
                 
