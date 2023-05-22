@@ -21,6 +21,7 @@ from mlxtend.feature_selection import SequentialFeatureSelector as SFS
 from mlxtend.feature_selection import ExhaustiveFeatureSelector as EFS
 from sklearn.ensemble import ExtraTreesClassifier
 import torch
+from tqdm import tqdm
 
 df = pd.read_csv('data.csv')
 X = df.drop(['Bankrupt?'], axis = 1)
@@ -39,8 +40,6 @@ X_train, X_val, y_train, y_val = train_test_split(X_train, y_train,
                                                                 test_size = Validation_size, 
                                                                  random_state = Random_state)
 
-#x_train, x_test, y_train, y_test = train_test_split(X, Y, test_size = our_test_size, random_state = our_random_state)
-#x_train, x_validation, y_train, y_validation = train_test_split(x_train, y_train, test_size = our_validation_size, random_state = our_random_state)
 
 def splitting_train_validation_StratifiedKFold(X, Y, n, our_random_state = None, our_shuffle = False):
     '''
@@ -62,7 +61,7 @@ def splitting_train_validation_StratifiedKFold(X, Y, n, our_random_state = None,
         x_validation = validation data of x ; type = pandas dataframe
         y_train = training data of y ; type = pandas dataframe
         y_validation = validation data of y ; type = pandas dataframe
-    '''   
+    '''
    
     StratifiedKFold_result = StratifiedKFold(n_splits = n, random_state = our_random_state, shuffle = our_shuffle)
     
@@ -124,7 +123,7 @@ def standardize(x_training_data, x_validation_data, x_testing_data, method):
     return x_training_data, x_validation_data, x_testing_data
     
    
-def feature_selection(X, y, method='raw', model=SVC(kernel='rbf', C=10 ),  n_feature=30 , random_state=0):
+def feature_selection(X, y, method='raw', model=SVC(kernel='rbf', C=10 ),  n_feature=30 , random_state=random_state):
     '''
     Input:
     X: input raw data include all feature; type: pandas dataframe
@@ -239,7 +238,7 @@ def feature_selection(X, y, method='raw', model=SVC(kernel='rbf', C=10 ),  n_fea
             for i1 in range(0, f_size - 3 + 1):
                 r_str = r_str + X.columns[i1] \
                         + '\t{:.4f}\t'.format(variance_inflation_factor(X.values,i1)) + '\n'
-            print(r_str)
+            # print(r_str)
             if variance_inflation_factor(X.values,record) > threshold:
                 X.drop([X.columns[record]], axis=1, inplace=True)
                 f_size -= 1
@@ -253,14 +252,16 @@ def feature_selection(X, y, method='raw', model=SVC(kernel='rbf', C=10 ),  n_fea
         model = model
         sfs = SFS(model, forward=True, cv=5, floating=False, k_features = n_feature,
                 scoring='recall_weighted', verbose=0, n_jobs=-1)
-        sfs.fit(X, y, custom_feature_names=X.columns.values)
-        print('Best score achieved:{}, Feature\'s names: {}\n'.format(sfs.k_score_, sfs.k_feature_names_))
-        for i1 in sfs.subsets_:
-            print('{}\n{}\n'.format(i1, sfs.subsets_[i1]))
-        
+        sfs.fit(X, y)
+        # print('Best score achieved:{}, Feature\'s names: {}\n'.format(sfs.k_score_, sfs.k_feature_names_))
+        for i1 in tqdm(sfs.subsets_):
+            # print('{}\n{}\n'.format(i1, sfs.subsets_[i1]))
+            pass            
         # drop feature
-        X_new = X[sfs.k_feature_names_]
-            
+        columns = []
+        for feature in sfs.k_feature_names_:
+            columns.append(feature)
+        X_new = X[columns]
             
     elif method == 'Exhaustive Feature Selection':
         '''跑很久'''
@@ -349,7 +350,6 @@ def evaluation(y_test, y_pred):
     f_beta = round(fbeta_score(y_test, y_pred, beta=3),4)
     
     return ac, f1, pre, rec, auc, f_beta
-
 def basic_ml(using_model , X_train, y_train, X_test, y_test ):
     '''
     to return evaluate dataframe
@@ -379,10 +379,10 @@ def basic_ml(using_model , X_train, y_train, X_test, y_test ):
 df = basic_ml(using_model={'xgb': XGBClassifier(), 'rf': RandomForestClassifier(
 )}, X_train, y_train, X_test, y_test)
 '''
-
-def objective(trial, method):
+def objective(trial, method, X_train, y_train, X_val, y_val):
     '''
     method: input using model; type: string
+         can be one of the following: 'svm', 'rf', 'xgb'
     clf: input using model; type: sklearn model
     '''
     if method == 'svm':
@@ -390,7 +390,7 @@ def objective(trial, method):
         kernel = trial.suggest_categorical(
             'kernel', ['linear', 'poly', 'rbf', 'sigmoid'])
         degree = trial.suggest_int('degree', 2, 5)
-        clf=SVC(C=C, kernel=kernel, degree=degree)
+        clf=SVC(C=C, kernel=kernel, degree=degree,random_state=our_random_state)
 
     elif method == 'rf':
         max_depth = trial.suggest_int("max_depth", 2, 128)
@@ -399,7 +399,7 @@ def objective(trial, method):
         min_samples_leaf = int(trial.suggest_int('min_samples_leaf', 2, 128))
         criterion = trial.suggest_categorical("criterion", ["gini", "entropy"])
         clf=RandomForestClassifier(min_samples_split=min_samples_split,
-                max_leaf_nodes=max_leaf_nodes, criterion=criterion, random_state=Random_state, max_depth=max_depth,
+                max_leaf_nodes=max_leaf_nodes, criterion=criterion, random_state=our_random_state, max_depth=max_depth,
                 min_samples_leaf=min_samples_leaf)
     elif method == 'xgb':
         max_depth = trial.suggest_int("max_depth", 2, 128)
@@ -410,7 +410,8 @@ def objective(trial, method):
             'colsample_bytree', 0.5, 1, 0.1)
         learning_rate = trial.suggest_loguniform('learning_rate', 1e-5, 1e-2)
         clf=XGBClassifier(max_depth=max_depth, min_child_weight=min_child_weight, gamma=gamma, subsample=subsample,
-                colsample_bytree=colsample_bytree, learning_rate=learning_rate)
+                colsample_bytree=colsample_bytree, learning_rate=learning_rate,
+                random_state=our_random_state)#, tree_method='gpu_hist' if torch.cuda.is_available() else 'auto')
     else:
         raise ValueError(f"Invalid method '{method}'")
     clf.fit(X_train, y_train)
@@ -421,13 +422,19 @@ def objective(trial, method):
     '''
     return scores
 
-def study(method='svm', n_trials=10):
+def study(method, n_trials,X_train, y_train, X_val, y_val):
     '''
-    method : input using model; type: string, default: 'xgb'
+    method : input using model; type: string, 
+        can be one of the following: 'svm', 'rf', 'xgb'
     n_trials : input number of trials; type: int
+    X_train: input training data ; type: pandas dataframe
+    y_train: input training label ; type: pandas dataframe
+    X_val: input validation data ; type: pandas dataframe
+    y_val: input validation label ; type: pandas dataframe
+    
     '''
-    study = optuna.create_study()
-    study.optimize(lambda trial: objective(trial, method), n_trials=n_trials)
+    study = optuna.create_study(direction='maximize')
+    study.optimize(lambda trial: objective(trial, method,X_train, y_train, X_val, y_val), n_trials=n_trials)
     '''
     output: best params of model type: dictionary
     '''
@@ -435,81 +442,16 @@ def study(method='svm', n_trials=10):
 
 '''
 example of using study
-basic_ml(using_model={'xgb': XGBClassifier(**study(method='xgb', n_trials=10)),'xgb1':XGBClassifier()},
+basic_ml(using_model={'xgb': XGBClassifier(**study(method='xgb', n_trials=10 ,X_train=X_train, y_train=y_train, X_val=X_val, y_val=y_val)), 
+                      'xgb1':XGBClassifier(random_state=our_random_state),
+                      'rf': RandomForestClassifier(**study(method='rf', n_trials=10 ,X_train=X_train, y_train=y_train, X_val=X_val, y_val=y_val)),
+                      'rf1':RandomForestClassifier(random_state=our_random_state),
+                      'svm': SVC(**study(method='svm', n_trials=10 ,X_train=X_train, y_train=y_train, X_val=X_val, y_val=y_val)),
+                      'svm1':SVC(random_state=our_random_state),
+                      },
  X_train=pd.concat([X_train, X_val], axis=0), y_train=pd.concat([y_train, y_val], axis=0), 
  X_test=X_test, y_test=y_test)
-
-'''
-def objective_nn(trial):
-    
-    '''
-    optuna for deep learning model
-    使用前請先將train validation test set 轉換為pytorch dataloader
-    '''
-    # Define the hyperparameter search space
-    hidden_size1 = trial.suggest_int('hidden_size1', 2, 64)
-    hidden_size2 = trial.suggest_int('hidden_size2', 2, 64)
-    hidden_size3 = trial.suggest_int('hidden_size3', 2, 64)
-    hidden_size4 = trial.suggest_int('hidden_size4', 2, 64)
-    learning_rate = trial.suggest_loguniform('learning_rate', 0.01, 0.5)
-    
-    # Create a new instance of the model with the suggested hyperparameters
-    model = NN_model(input_size, hidden_size1, hidden_size2, hidden_size3,  output_size)
-    
-    # Define the loss function and optimizer
-    criterion = torch.nn.BCELoss()
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-    
-    # Training loop
-    model.train()
-    for epoch in range(num_epochs):
-        for X_train, y_train in train_loader:
-            optimizer.zero_grad()  
-            outputs = model(X_train)
-            loss = criterion(outputs, y_train.unsqueeze(1))
-            loss.backward()
-            optimizer.step()
-    
-    # Evaluation on the validation set
-    model.eval()
-    predictions = []
-    y_valids = []
-    with torch.no_grad():
-        for x_valid, y_valid in valid_loader:
-            outputs = model(x_valid)
-            predictions.extend(outputs.round().squeeze().tolist())
-            y_valids.extend(y_valid.round().squeeze().tolist())
-    # Calculate F1 score
-    score = fbeta_score(y_valids, predictions)
-    
-    return score
-
-class NN_model(torch.nn.Module):
-    '''
-    deep learning model
-    使用前請自訂超參數
-    num_epochs, batch_size, input_size, hidden_size, output_size 
-    '''
-    
-    def __init__(self, input_size, hidden_size1, hidden_size2, hidden_size3, output_size):
-        super(NN_model, self).__init__()
-        self.input = torch.nn.Linear(input_size, hidden_size1)
-        self.hidden1 = torch.nn.Linear(hidden_size1, hidden_size2)
-        self.hidden2 = torch.nn.Linear(hidden_size2, hidden_size3)
-        self.hidden3 = torch.nn.Linear(hidden_size3, hidden_size4)
-        self.output = torch.nn.Linear(hidden_size3, output_size)
-        
-    def forward(self, x):
-        x = self.input(x)
-        x = torch.sigmoid(x)
-        x = self.hidden1(x)
-        x = torch.sigmoid(x)
-        x = self.hidden2(x)
-        x = torch.sigmoid(x)
-        x = self.hidden3(x)
-        x = torch.sigmoid(self.output(x))
-        return x
-    
+'''    
 
 if __name__ == '__main__':
     '''
