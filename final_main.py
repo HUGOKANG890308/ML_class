@@ -32,22 +32,6 @@ df = s.pd.read_csv('data.csv')
 X = df.drop(['Bankrupt?'], axis = 1)
 Y = df['Bankrupt?']
 
-def prepare_X_Y():
-    # train, validation, and test split
-    x_train, x_test, y_train, y_test = s.train_test_split(X, Y, test_size = test_size, random_state = random_state)
-    x_train, x_val, y_train, y_val = s.splitting_train_validation_StratifiedKFold(x_train, 
-                                                                                  y_train, 
-                                                                                  k_fold_num, 
-                                                                                  random_state, 
-                                                                                  our_shuffle = True)
-    # standardize
-    x_train, x_val, x_test = s.standardize(x_train, x_val, x_test, 'min_max')
-    x_train = s.pd.DataFrame(x_train, columns = X.columns)
-    x_val = s.pd.DataFrame(x_val, columns = X.columns)
-    x_test = s.pd.DataFrame(x_test, columns = X.columns)
-    return x_train, x_val, x_test, y_train, y_val, y_test
-
-
 # train, test split
 X_train, x_test, Y_train, y_test = s.train_test_split(X, Y, test_size = test_size, random_state = random_state)
 
@@ -64,8 +48,6 @@ for train_index, val_index in s.tqdm(sskf.split(X_train, Y_train)):
     x_train = s.pd.DataFrame(x_train, columns = X.columns)
     x_val = s.pd.DataFrame(x_val, columns = X.columns)
     x_test = s.pd.DataFrame(x_test, columns = X.columns)
-
-# x_train, x_val, x_test, y_train, y_val, y_test = prepare_X_Y()
 
     # feature selection
     fs_df = s.pd.DataFrame()
@@ -104,3 +86,4 @@ for train_index, val_index in s.tqdm(sskf.split(X_train, Y_train)):
 final_df = fs_df.copy()
 final_df.iloc[:, 3:] = s.np.mean(final, axis = 0)
 final_df.to_csv('final_result.csv')
+
