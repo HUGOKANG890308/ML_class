@@ -21,16 +21,25 @@ from mlxtend.feature_selection import SequentialFeatureSelector as SFS
 from mlxtend.feature_selection import ExhaustiveFeatureSelector as EFS
 from sklearn.ensemble import ExtraTreesClassifier
 import torch
-random_state=0
-'''
-our_test_size, our_validation_size = 0.2,0.2
+from tqdm import tqdm
+
 df = pd.read_csv('data.csv')
 X = df.drop(['Bankrupt?'], axis = 1)
 Y = df['Bankrupt?']
-X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size = our_test_size, random_state = random_state)
-X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size = our_validation_size, random_state = random_state)
+print(f'X is {X}, X.shape is {X.shape}\n\n')
+print(f'Y is {Y}, Y.shape is {Y.shape}\n\n')
+#parameters of def splitting_train_validation_StratifiedKFold
+our_random_state = 0
+our_shuffle = False
+n=5
+Test_size,Validation_size = 0.2,0.2
+Random_state = 0
+X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size = Test_size, 
+                                                    random_state = Random_state)
+X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, 
+                                                                test_size = Validation_size, 
+                                                                 random_state = Random_state)
 
-'''
 
 def splitting_train_validation_StratifiedKFold(X, Y, n, our_random_state = None, our_shuffle = False):
     '''
@@ -52,9 +61,9 @@ def splitting_train_validation_StratifiedKFold(X, Y, n, our_random_state = None,
         x_validation = validation data of x ; type = pandas dataframe
         y_train = training data of y ; type = pandas dataframe
         y_validation = validation data of y ; type = pandas dataframe
-    '''   
-    
-    StratifiedKFold_result = StratifiedKFold(n_splits = n, random_state = random_state, shuffle = our_shuffle)
+    '''
+   
+    StratifiedKFold_result = StratifiedKFold(n_splits = n, random_state = our_random_state, shuffle = our_shuffle)
     
     for train_index, validate_index in StratifiedKFold_result.split(X, Y):
        print("Train index:", train_index, "Test index:", validate_index)
@@ -229,7 +238,7 @@ def feature_selection(X, y, method='raw', model=SVC(kernel='rbf', C=10 ),  n_fea
             for i1 in range(0, f_size - 3 + 1):
                 r_str = r_str + X.columns[i1] \
                         + '\t{:.4f}\t'.format(variance_inflation_factor(X.values,i1)) + '\n'
-            print(r_str)
+            # print(r_str)
             if variance_inflation_factor(X.values,record) > threshold:
                 X.drop([X.columns[record]], axis=1, inplace=True)
                 f_size -= 1
@@ -243,14 +252,16 @@ def feature_selection(X, y, method='raw', model=SVC(kernel='rbf', C=10 ),  n_fea
         model = model
         sfs = SFS(model, forward=True, cv=5, floating=False, k_features = n_feature,
                 scoring='recall_weighted', verbose=0, n_jobs=-1)
-        sfs.fit(X, y, custom_feature_names=X.columns.values)
-        print('Best score achieved:{}, Feature\'s names: {}\n'.format(sfs.k_score_, sfs.k_feature_names_))
-        for i1 in sfs.subsets_:
-            print('{}\n{}\n'.format(i1, sfs.subsets_[i1]))
-        
+        sfs.fit(X, y)
+        # print('Best score achieved:{}, Feature\'s names: {}\n'.format(sfs.k_score_, sfs.k_feature_names_))
+        for i1 in tqdm(sfs.subsets_):
+            # print('{}\n{}\n'.format(i1, sfs.subsets_[i1]))
+            pass            
         # drop feature
-        X_new = X[sfs.k_feature_names_]
-            
+        columns = []
+        for feature in sfs.k_feature_names_:
+            columns.append(feature)
+        X_new = X[columns]
             
     elif method == 'Exhaustive Feature Selection':
         '''跑很久'''
@@ -282,7 +293,7 @@ def feature_selection(X, y, method='raw', model=SVC(kernel='rbf', C=10 ),  n_fea
     
     return X_new, y
 
-def imblance_data(X_train, y_train, sample_no, random_state = random_state):
+def imblance_data(X_train, y_train, sample_no, random_state = our_random_state):
     '''
     X_train: input training data ; type: pandas dataframe
     y_train: input training label ; type: pandas dataframe
@@ -368,7 +379,6 @@ def basic_ml(using_model , X_train, y_train, X_test, y_test ):
 df = basic_ml(using_model={'xgb': XGBClassifier(), 'rf': RandomForestClassifier(
 )}, X_train, y_train, X_test, y_test)
 '''
-    
 def objective(trial, method, X_train, y_train, X_val, y_val):
     '''
     method: input using model; type: string
@@ -380,7 +390,7 @@ def objective(trial, method, X_train, y_train, X_val, y_val):
         kernel = trial.suggest_categorical(
             'kernel', ['linear', 'poly', 'rbf', 'sigmoid'])
         degree = trial.suggest_int('degree', 2, 5)
-        clf=SVC(C=C, kernel=kernel, degree=degree,random_state=random_state)
+        clf=SVC(C=C, kernel=kernel, degree=degree,random_state=our_random_state)
 
     elif method == 'rf':
         max_depth = trial.suggest_int("max_depth", 2, 128)
@@ -389,7 +399,7 @@ def objective(trial, method, X_train, y_train, X_val, y_val):
         min_samples_leaf = int(trial.suggest_int('min_samples_leaf', 2, 128))
         criterion = trial.suggest_categorical("criterion", ["gini", "entropy"])
         clf=RandomForestClassifier(min_samples_split=min_samples_split,
-                max_leaf_nodes=max_leaf_nodes, criterion=criterion, random_state=random_state, max_depth=max_depth,
+                max_leaf_nodes=max_leaf_nodes, criterion=criterion, random_state=our_random_state, max_depth=max_depth,
                 min_samples_leaf=min_samples_leaf)
     elif method == 'xgb':
         max_depth = trial.suggest_int("max_depth", 2, 128)
@@ -401,7 +411,7 @@ def objective(trial, method, X_train, y_train, X_val, y_val):
         learning_rate = trial.suggest_loguniform('learning_rate', 1e-5, 1e-2)
         clf=XGBClassifier(max_depth=max_depth, min_child_weight=min_child_weight, gamma=gamma, subsample=subsample,
                 colsample_bytree=colsample_bytree, learning_rate=learning_rate,
-                random_state=random_state)#, tree_method='gpu_hist' if torch.cuda.is_available() else 'auto')
+                random_state=our_random_state)#, tree_method='gpu_hist' if torch.cuda.is_available() else 'auto')
     else:
         raise ValueError(f"Invalid method '{method}'")
     clf.fit(X_train, y_train)
@@ -430,235 +440,18 @@ def study(method, n_trials,X_train, y_train, X_val, y_val):
     '''
     return study.best_params
 
-
 '''
 example of using study
-basic_ml(using_model={'xgb': XGBClassifier(**study(method='xgb', n_trials=5 ,X_train=X_train, y_train=y_train, X_val=X_val, y_val=y_val)), 
-                      'xgb1':XGBClassifier(random_state=random_state),
-                      'rf': RandomForestClassifier(**study(method='rf', n_trials=5 ,X_train=X_train, y_train=y_train, X_val=X_val, y_val=y_val)),
-                      'rf1':RandomForestClassifier(random_state=random_state),
-                      'svm': SVC(**study(method='svm', n_trials=5 ,X_train=X_train, y_train=y_train, X_val=X_val, y_val=y_val)),
-                      'svm1':SVC(random_state=random_state),
+basic_ml(using_model={'xgb': XGBClassifier(**study(method='xgb', n_trials=10 ,X_train=X_train, y_train=y_train, X_val=X_val, y_val=y_val)), 
+                      'xgb1':XGBClassifier(random_state=our_random_state),
+                      'rf': RandomForestClassifier(**study(method='rf', n_trials=10 ,X_train=X_train, y_train=y_train, X_val=X_val, y_val=y_val)),
+                      'rf1':RandomForestClassifier(random_state=our_random_state),
+                      'svm': SVC(**study(method='svm', n_trials=10 ,X_train=X_train, y_train=y_train, X_val=X_val, y_val=y_val)),
+                      'svm1':SVC(random_state=our_random_state),
                       },
  X_train=pd.concat([X_train, X_val], axis=0), y_train=pd.concat([y_train, y_val], axis=0), 
  X_test=X_test, y_test=y_test)
-'''
-
-'''
-Deeplearning model
-使用方法 : 
-Step1 : 先將X_train, y_train, X_valid, y_valid, X_test, y_test, 帶入Function "convert_to_DataLoader"
-        返還 (train_loader, valid_loader, test_loader)
-Step2 : 將train_loader, valid_loader, test_loader帶入Training_nn進行超參數的調教
-        返還 Function "evaluation" 中的所有metric
-'''
-class nn_model(nn.Module):
-    '''
-    此為deep learning model 
-    可調教的參數有 n_layers, hidden_sizes, learning_rate
-    '''
-    def __init__(self, input_size, hidden_sizes, output_size):
-        super(nn_model, self).__init__()
-        self.layers = nn.ModuleList()
-        prev_size = input_size
-        for hidden_size in hidden_sizes:
-            self.layers.append(nn.Linear(prev_size, hidden_size))
-            self.layers.append(nn.Sigmoid())
-            prev_size = hidden_size
-        self.output_layer = nn.Linear(prev_size, output_size)
-
-    def forward(self, x):
-        for layer in self.layers:
-            x = layer(x)
-        x = self.output_layer(x)
-        x = torch.sigmoid(x)
-        return x
-
-    
-def convert_to_DataLoader(X_train, y_train, X_valid, y_valid, X_test, y_test, batch_size):
-    '''
-    這個function用來將training validation, testing data 轉換為 Pytorch DataLoader
-    input:
-        X_train, y_train, X_valid, y_valid, X_test, y_test : 
-            這些data 必須經過imbalance data的處理以及標準化
-        batch_size : 
-            用來決定DataLoader 一次迭帶多少筆data
-    output:
-        train_loader, valid_loader, test_loader :
-            Pytorch DataLoader
-    '''
-    shuffle = False
-    batch_size = batch_size
-    # Convert data to pytorch DataLoader 
-    X_train = torch.tensor(X_train, dtype=torch.float32)
-    X_valid = torch.tensor(X_valid, dtype=torch.float32)
-    X_test = torch.tensor(X_test, dtype=torch.float32)
-    y_train = torch.tensor(y_train, dtype=torch.float32)
-    y_valid = torch.tensor(y_valid, dtype=torch.float32)
-    y_test = torch.tensor(y_test, dtype=torch.float32)
-    
-    
-    #Create train dataloader
-    train_dataset = TensorDataset(X_train, y_train)
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle)
-
-    #Create validation dataloader
-    valid_dataset = TensorDataset(X_valid, y_valid)
-    valid_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=shuffle)
-
-    #Create train dataloader
-    test_dataset = TensorDataset(X_test, y_test)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=shuffle) 
-    
-    return train_loader, valid_loader, test_loader
-
-def objective_nn(trial, train_loader, valid_loader):
-    '''
-    optuna_object for nn_model, hyperparameter(n_layers, hidden_sizes, learning_rate)
-
-    input : train_loader, valid_loader :
-            
-    output : our main metric
-    '''
-    # 定義參數
-    input_size = 95
-    n_epochs = 20
-    output_size = 1
-    print("*"*50)
-    hidden_sizes = []
-    n_layers = trial.suggest_int("n_layers", 1, 5)  # Suggest the number of layers to be tuned
-    for i in range(n_layers):
-        hidden_sizes.append(trial.suggest_int(f"hidden_size_{i}", 2, 64))  # Suggest the size of each hidden layer
-    learning_rate = trial.suggest_loguniform('learning_rate', 1e-5, 1e-1)
-    
-    
-    model = nn_model(input_size, hidden_sizes, output_size)
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-    criterion = nn.CrossEntropyLoss()
-
-    model.train()
-    for epoch in range(n_epochs):
-        for inputs, labels in train_loader:
-            outputs = model(inputs)
-            loss = criterion(outputs, labels.unsqueeze(1))
-            loss.backward()
-            optimizer.step()
-            optimizer.zero_grad()
-    model.eval()
-    
-    predictions = []
-    y_valids = []
-    score = None
-    with torch.no_grad():
-        for x_valid, y_valid in valid_loader:
-            outputs = model(x_valid)
-            predictions.extend(outputs.round().squeeze().tolist())
-            y_valids.extend(y_valid.round().squeeze().tolist())
-    # Calculate F1 score
-    score = fbeta_score(y_valids, predictions, beta=3) 
-    #score = accuracy_score(y_valids, predictions)
-    return score
-
-def Training_nn(train_loader, valid_loader, test_loader, input_size, n_epochs, batch_size, n_trials):
-    '''
-    這個Function用來訓練及調教nn_model中的超參數
-    input :
-        train_loader, valid_loader, test_loader
-        input_size : number of feature after feature selection 
-        n_epochs : number od epoch
-        batch_size : number of data for every iteration
-        n_trials : number of trials for optuna
-    output :
-        Our evaluation metrics
-        ac, f1, pre, rec, auc, f_beta
-    '''
-    # 定義引數
-    hidden_size = []
-    output_size = 1
-    learning_rate = None
-    
-    n_trials = n_trials
-    batch_size = batch_size
-    n_epochs = n_epochs
-    shuffle = False
-    
-
-    
-    # Hyperparametor tuneing using optuna
-    
-    ## 設定 sampler
-    #alg=optuna.samplers.GridSampler(seed=42)   # Grid search
-    #alg=optuna.samplers.RandomSampler(seed=42) # Random search
-    alg=optuna.samplers.TPESampler(seed=42) # Tree-structured Parzen Estimator algorithm.   
-    #alg=optuna.samplers.CmaEsSampler(seed=42) # CMA-ES based algorithm
-    #alg=optuna.samplers.NSGAIISampler(seed=42)# Nondominated Sorting Genetic Algorithm II 
-    #alg=optuna.samplers.MOTPESampler(seed=42) # Multiobjective Tree-structured Parzen Estimator
-    #alg=optuna.samplers.QMCSampler(seed=42) # A Quasi Monte Carlo sampling algorithm
-    #alg=optuna.samplers.BruteForceSampler(seed=42) # Brute force algorithm.
-    #alg=optuna.samplers.intersection_search_space()# the intersection of parameter distributions that have been suggested in the completed trials of the study so far.
-    #alg=optuna.samplers.IntersectionSearchSpace()  # provides the same functionality of intersection_search_space with a much faster way
-    
-    
-    ## 設定 pruners (修剪方法)
-    # pruner=optuna.pruners.MedianPruner()     # Prune with median. For RandomSampler, MedianPruner
-    # pruner=optuna.pruners.NopPruner()        # No pruning
-    # pruner=optuna.pruners.PatientPruner()    # Prune with tolerance
-    # pruner=optuna.pruners.PercentilePruner() # Prune with specified percentile
-    # pruner=optuna.pruners.SuccessiveHalvingPruner() # Prune with Asynchronous Successive Halving algorithm
-    pruner=optuna.pruners.HyperbandPruner() # SuccessiveHalvingPruner的更激進版本, 並根據中間結果修剪試驗. For TPESampler, HyperbandPruner is the best.
-    # pruner=optuna.pruners.ThresholdPruner() # 當目標函數的值超過或是低於給定閾值時，該剪枝器停止試驗
-    
-    ## tuneing model 
-    study = optuna.create_study(sampler=alg, direction='maximize')
-    study.optimize(lambda trial: objective_nn(trial,  train_loader=train_loader, valid_loader=valid_loader), n_trials=n_trials)
-    best_params =  study.best_params
-        
-    # Retrain model
-    hidden_sizes = list(best_params.values())[1:-2]
-    n_layers = list(best_params.values())[0]
-    learning_rate = list(best_params.values())[-1]
-    best_model = nn_model(input_size, hidden_size, output_size)
-    best_optimizer = optim.Adam(best_model.parameters(), lr=learning_rate)  # Define the optimizer
-    criterion = torch.nn.BCELoss()
-    
-    best_model.train()
-    for epoch in range(n_epochs):
-        for X_train, y_train in train_loader:
-            best_optimizer.zero_grad()  # Use the best optimizer
-            outputs = best_model(X_train)
-            loss = criterion(outputs, y_train.unsqueeze(1))
-            loss.backward()
-            best_optimizer.step()
-            
-    # Evaluate the best model on the test set
-    best_model.eval()
-    predictions = []
-    y_tests = []
-    with torch.no_grad():
-        for X_test, y_test in test_loader:
-            outputs = best_model(X_test)
-            predictions.extend(outputs.round().squeeze().tolist())
-            y_tests.extend(y_test.round().squeeze().tolist())
-            
-    # Calculate F1 score on the test set
-    test_score = fbeta_score(y_tests, predictions, beta=3)
-    print("Best Fbata_score on the test set: {:.4f}".format(test_score))
-    
-    return evaluation(y_tests, predictions) 
-'''
-Deep Learning example
-# Difine parameter
-n_epochs = 10
-batch_size = 128
-n_trials = 100
-input_size = X_train.shape[1]
-random_state = 0
-shuffle = False
-
-train_loader, valid_loader, test_loader = convert_to_DataLoader(X_train, y_train, X_valid, y_valid, X_test, y_test, batch_size)
-ac, f1, pre, rec, auc, f_beta = Training_nn(train_loader, valid_loader, test_loader, input_size, n_epochs, batch_size, n_trials)
-
-'''
+'''    
 
 if __name__ == '__main__':
     '''
