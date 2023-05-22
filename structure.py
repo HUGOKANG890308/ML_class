@@ -23,11 +23,6 @@ from sklearn.ensemble import ExtraTreesClassifier
 import torch
 from tqdm import tqdm
 
-df = pd.read_csv('data.csv')
-X = df.drop(['Bankrupt?'], axis = 1)
-Y = df['Bankrupt?']
-print(f'X is {X}, X.shape is {X.shape}\n\n')
-print(f'Y is {Y}, Y.shape is {Y.shape}\n\n')
 
 
 def splitting_train_validation_StratifiedKFold(X, Y, n, our_random_state = None, our_shuffle = False):
