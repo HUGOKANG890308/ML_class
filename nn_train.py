@@ -2,7 +2,7 @@
 """
 Created on Sat May 20 18:57:04 2023
 
-@author: User
+@author: AllenWu
 """
 
 import structure as s
@@ -24,7 +24,7 @@ shuffle = False
 input_size = None
 n_epochs = 10
 batch_size = 128
-n_trials = 100
+n_trials = 5
 
 df = pd.read_csv('data.csv')
 X = df.drop(['Bankrupt?'], axis=1)
@@ -45,6 +45,6 @@ y_test = np.array(y_test)
 input_size = X_train.shape[1]
 
 train_loader, valid_loader, test_loader = convert_to_DataLoader(X_train, y_train, X_valid, y_valid, X_test, y_test, batch_size)
-ac, f1, pre, rec, auc, f_beta = Training_nn(train_loader, valid_loader, test_loader, input_size, n_epochs, batch_size, n_trials)
+final_df = Training_nn(train_loader, valid_loader, test_loader, input_size, n_epochs, batch_size, n_trials)
 
 

@@ -521,7 +521,7 @@ def convert_to_DataLoader(X_train, y_train, X_valid, y_valid, X_test, y_test, ba
     
     return train_loader, valid_loader, test_loader
 
-def objective_nn(trial, train_loader, valid_loader):
+def objective_nn(trial, train_loader, valid_loader, input_size):
     '''
     optuna_object for nn_model, hyperparameter(n_layers, hidden_sizes, learning_rate)
 
@@ -530,7 +530,7 @@ def objective_nn(trial, train_loader, valid_loader):
     output : our main metric
     '''
     # 定義參數
-    input_size = 95
+    input_size = input_size
     n_epochs = 20
     output_size = 1
     print("*"*50)
@@ -619,7 +619,7 @@ def Training_nn(train_loader, valid_loader, test_loader, input_size, n_epochs, b
     
     ## tuneing model 
     study = optuna.create_study(sampler=alg, direction='maximize')
-    study.optimize(lambda trial: objective_nn(trial,  train_loader=train_loader, valid_loader=valid_loader), n_trials=n_trials)
+    study.optimize(lambda trial: objective_nn(trial,  train_loader=train_loader, valid_loader=valid_loader, input_size=input_size), n_trials=n_trials)
     best_params =  study.best_params
         
     # Retrain model
@@ -653,7 +653,11 @@ def Training_nn(train_loader, valid_loader, test_loader, input_size, n_epochs, b
     test_score = fbeta_score(y_tests, predictions, beta=3)
     print("Best Fbata_score on the test set: {:.4f}".format(test_score))
     
-    return evaluation(y_tests, predictions) 
+    score = []
+    score.append(list(evaluation(y_tests, predictions)))
+    return pd.DataFrame(data = score, columns = ['accuracy', 'f1_score', 'precision',
+                                                 'recall', 'auc', 'f_beta'])
+     
 '''
 Deep Learning example
 # Difine parameter
