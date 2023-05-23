@@ -7,7 +7,7 @@ test_size = 0.2
 k_fold_num = 5
 fs_feature_num = 30
 fs_model = s.SVC(kernel='rbf', C=10 )
-n_trials = 5
+n_trials = 100
 n_epochs = 10
 batch_size = 128
 

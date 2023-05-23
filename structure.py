@@ -654,8 +654,8 @@ def Training_nn(train_loader, valid_loader, test_loader, input_size, n_epochs, b
     print("Best Fbata_score on the test set: {:.4f}".format(test_score))
     
     score = []
-    score.append(list(evaluation(y_tests, predictions)))
-    return pd.DataFrame(data = score, columns = ['accuracy', 'f1_score', 'precision',
+    score.append(['NN']+list(evaluation(y_tests, predictions)))
+    return pd.DataFrame(data = score, columns = ['model','accuracy', 'f1_score', 'precision',
                                                  'recall', 'auc', 'f_beta'])
      
 '''
