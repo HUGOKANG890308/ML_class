@@ -26,7 +26,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
-
+import matplotlib.pyplot as plt
 our_random_state = 0
 
 def splitting_train_validation_StratifiedKFold(X, Y, n, our_random_state = None, our_shuffle = False):
@@ -521,7 +521,7 @@ def convert_to_DataLoader(X_train, y_train, X_valid, y_valid, X_test, y_test, ba
     
     return train_loader, valid_loader, test_loader
 
-def objective_nn(trial, train_loader, valid_loader, input_size):
+def objective_nn(trial, train_loader, valid_loader, n_epochs ,input_size):
     '''
     optuna_object for nn_model, hyperparameter(n_layers, hidden_sizes, learning_rate)
 
@@ -531,10 +531,12 @@ def objective_nn(trial, train_loader, valid_loader, input_size):
     '''
     # 定義參數
     input_size = input_size
-    n_epochs = 20
+    n_epochs = n_epochs
     output_size = 1
     print("*"*50)
     hidden_sizes = []
+    
+    # hyperparametor grid
     n_layers = trial.suggest_int("n_layers", 1, 5)  # Suggest the number of layers to be tuned
     for i in range(n_layers):
         hidden_sizes.append(trial.suggest_int(f"hidden_size_{i}", 2, 64))  # Suggest the size of each hidden layer
@@ -544,25 +546,34 @@ def objective_nn(trial, train_loader, valid_loader, input_size):
     model = nn_model(input_size, hidden_sizes, output_size)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     criterion = nn.CrossEntropyLoss()
-
+    
+    
+    
     model.train()
     for epoch in range(n_epochs):
+       
+        # train loop
         for inputs, labels in train_loader:
             outputs = model(inputs)
             loss = criterion(outputs, labels.unsqueeze(1))
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
-    model.eval()
+        
+        # evaluation
+        model.eval()
+        
+        predictions = []
+        y_valids = []
+        score = None
+        with torch.no_grad():
+            for x_valid, y_valid in valid_loader:
+                outputs = model(x_valid)
+                predictions.extend(outputs.round().squeeze().tolist())
+                y_valids.extend(y_valid.round().squeeze().tolist())
+                
+              
     
-    predictions = []
-    y_valids = []
-    score = None
-    with torch.no_grad():
-        for x_valid, y_valid in valid_loader:
-            outputs = model(x_valid)
-            predictions.extend(outputs.round().squeeze().tolist())
-            y_valids.extend(y_valid.round().squeeze().tolist())
     # Calculate F1 score
     score = fbeta_score(y_valids, predictions, beta=3) 
     #score = accuracy_score(y_valids, predictions)
@@ -581,7 +592,7 @@ def Training_nn(train_loader, valid_loader, test_loader, input_size, n_epochs, b
         Our evaluation metrics
         ac, f1, pre, rec, auc, f_beta
     '''
-    # 定義引數
+    # Config
     hidden_size = []
     output_size = 1
     learning_rate = None
@@ -591,7 +602,15 @@ def Training_nn(train_loader, valid_loader, test_loader, input_size, n_epochs, b
     n_epochs = n_epochs
     shuffle = False
     
-
+    """
+    # calculate loss 
+    train_losses = []
+    valid_losses = []
+    test_losses = []
+    train_accuracies = []
+    valid_accuracies = []
+    test_accuracies = []
+    """
     
     # Hyperparametor tuneing using optuna
     
@@ -617,12 +636,12 @@ def Training_nn(train_loader, valid_loader, test_loader, input_size, n_epochs, b
     pruner=optuna.pruners.HyperbandPruner() # SuccessiveHalvingPruner的更激進版本, 並根據中間結果修剪試驗. For TPESampler, HyperbandPruner is the best.
     # pruner=optuna.pruners.ThresholdPruner() # 當目標函數的值超過或是低於給定閾值時，該剪枝器停止試驗
     
-    ## tuneing model 
+    ## tuneing Hyperparameter
     study = optuna.create_study(sampler=alg, direction='maximize')
-    study.optimize(lambda trial: objective_nn(trial,  train_loader=train_loader, valid_loader=valid_loader, input_size=input_size), n_trials=n_trials)
+    study.optimize(lambda trial: objective_nn(trial,  train_loader=train_loader, valid_loader=valid_loader, input_size=input_size, n_epochs=n_epochs), n_trials=n_trials)
     best_params =  study.best_params
         
-    # Retrain model
+    # Retrain model and plot testing & validation loss
     hidden_sizes = list(best_params.values())[1:-2]
     n_layers = list(best_params.values())[0]
     learning_rate = list(best_params.values())[-1]
@@ -630,15 +649,54 @@ def Training_nn(train_loader, valid_loader, test_loader, input_size, n_epochs, b
     best_optimizer = optim.Adam(best_model.parameters(), lr=learning_rate)  # Define the optimizer
     criterion = torch.nn.BCELoss()
     
+    train_losses = []
+    val_losses = []
+    
     best_model.train()
     for epoch in range(n_epochs):
+        
+        # Training loop
+        best_model.train()
+        train_loss = 0
         for X_train, y_train in train_loader:
             best_optimizer.zero_grad()  # Use the best optimizer
             outputs = best_model(X_train)
             loss = criterion(outputs, y_train.unsqueeze(1))
             loss.backward()
             best_optimizer.step()
+            train_loss += loss.item()
+        train_loss /= len(train_loader)
+        train_losses.append(train_loss)
             
+         # Validation Loop
+        best_model.eval()
+        val_loss = 0
+        with torch.no_grad():
+            for X_valid, y_valid in valid_loader:
+                outputs = best_model(X_valid)
+                loss = criterion(outputs, y_valid.unsqueeze(1))
+                val_loss += loss.item()
+            val_loss /= len(valid_loader)
+            val_losses.append(val_loss)
+            
+            '''
+        # Vlidation Loop
+        best_model.eval()
+        for X_valid, y_valid in valid_loader:
+            outputs = best_model(X_valid)
+            loss = criterion(outputs, y_train.unsqueeze(1))
+            val_losses.append(loss)
+            '''
+    # Plotting the losses
+    epochs = range(1, n_epochs+1)
+    plt.plot(epochs, train_losses, label='Training Loss')
+    plt.plot(epochs, val_losses, label='Validation Loss')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.legend()
+    plt.show()
+            
+    
     # Evaluate the best model on the test set
     best_model.eval()
     predictions = []

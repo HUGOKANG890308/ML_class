@@ -5,11 +5,11 @@ import structure as s
 random_state = 0
 test_size = 0.2
 k_fold_num = 5
-fs_feature_num = 30
+fs_feature_num = 50
 fs_model = s.SVC(kernel='rbf', C=10 )
-n_trials = 100
-n_epochs = 10
-batch_size = 128
+n_trials = 5
+n_epochs = 450
+batch_size = 100
 
 # Tune best feature_selection and imbaloance_data method
 
@@ -25,6 +25,7 @@ imbalance_method = {'ROS': 1,
                     'SMOTEENN': 5, 
                     'Without_balance': 6
                     }
+
 
 df = s.pd.read_csv('data.csv')
 X = df.drop(['Bankrupt?'], axis=1)
