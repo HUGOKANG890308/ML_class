@@ -7,7 +7,7 @@ test_size = 0.2
 k_fold_num = 5
 fs_model = s.SVC(kernel='rbf', C=10 )
 fs_feature_num = 30
-n_trials = 100
+n_trials = 1
 
 feature_selection_mtehod = {'VIF': 'variance_inflation_factor', 
                             'VIF + SFS': 'Sequential Feature Selection', 
@@ -59,3 +59,19 @@ study.optimize(objective, n_trials=n_trials)
 s.optuna.visualization.plot_optimization_history(study)
 s.optuna.visualization.plot_param_importances(study)
 s.optuna.visualization.plot_intermediate_values(study)
+from sklearn.metrics import roc_curve
+import matplotlib.pyplot as plt
+def plot_roc_curve(fper, tper):
+    plt.plot(fper, tper, color='red', label='ROC')
+    plt.plot([0, 1], [0, 1], color='green', linestyle='--')
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('VIF_ROS_XGB')
+    plt.legend()
+    plt.show()
+model=s.XGBClassifier(** study.best_params)
+model=model.fit(x_train,y_train)
+prob = model.predict_proba(x_test)
+prob = prob[:, 1]
+fper, tper, thresholds = roc_curve(y_test, prob)
+plot_roc_curve(fper, tper)
