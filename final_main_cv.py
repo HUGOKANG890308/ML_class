@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu May 18 20:50:44 2023
-
-@author: EricMiao
-"""
 import structure as s
 
 # some config
